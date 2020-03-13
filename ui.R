@@ -30,7 +30,8 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 	title = "Corona / Covid-19 growth",
 	shinyjs::useShinyjs(),
 
-	h2(HTML("Corona / Covid-19 growth")),
+	h2(HTML("Corona / Covid-19 growth visualization")),
+	HTML('<div class="alert alert-warning alert-dismissible" role="warning"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>Please report any bugs as issues at <a href="https://github.com/nicebread/corona">Github</a>, or contribute with pull requests!</div>'),
 
 	br(),
 
@@ -68,6 +69,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			htmlOutput("res")
 		)			
 	),
-	HTML('This visualization is based on a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>.'),
-	HTML('Data source: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> (updated daily)')
+	HTML('This visualization is based on a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>.<br>'),
+	HTML('Data sources: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> and <a href="https://github.com/CSSEGISandData/COVID-19">Johns Hopkins CSSE</a> (both are updated daily)'),
+	p('2020 Felix Schönbrodt, <a href="https://www.nicebread.de">https://www.nicebread.de</a>')
 ))

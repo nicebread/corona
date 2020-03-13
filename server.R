@@ -6,6 +6,7 @@ library(tidyverse)
 library(ggrepel)
 library(stringr)
 library(lubridate)
+library(tidyr)
 
 today <- Sys.Date()
 last_ECDC_download <- str_match(list.files(pattern="ECDC"), "_(.*)\\.xls")[1, 2]
