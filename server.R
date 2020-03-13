@@ -216,6 +216,8 @@ shinyServer(function(input, output, session) {
 			return(list(h3("No data selected.")))
 		}
 	  
+		y_label <- paste0("Cumulative number of diagnosed cases", ifelse(input$logScale == TRUE, " (log scale)", ""))
+		
 		p1 <- ggplot(dat_selection(), aes(x=day_since_start, y=cum_cases, color=country)) + 
 			geom_point() + 
 			geom_line() + 
@@ -223,7 +225,7 @@ shinyServer(function(input, output, session) {
 			geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE) + scale_color_discrete(guide = FALSE) +
 			theme_bw() + 
 			xlab(paste0("Days since ", input$start_cumsum, "th case")) + 
-			ylab("Cumulative number of diagnosed cases") +
+			ylab(y_label) +
 			ggtitle(paste0("Visualization based on data from ", input$datasource, ". Data set from ", current_data_date()))
 		
 		if (input$logScale == TRUE) {

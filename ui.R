@@ -70,6 +70,6 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		)			
 	),
 	HTML('This visualization is based on a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>.<br>'),
-	HTML('Data sources: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">European Centre for Disease Prevention and Control</a> and <a href="https://github.com/CSSEGISandData/COVID-19">Johns Hopkins CSSE</a> (both are updated daily)'),
-	p('2020 Felix Schönbrodt, <a href="https://www.nicebread.de">https://www.nicebread.de</a>')
+	HTML('Data sources: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide"  target="_blank">European Centre for Disease Prevention and Control</a> and <a href="https://github.com/CSSEGISandData/COVID-19"  target="_blank">Johns Hopkins CSSE</a> (both are updated daily)<br><br>'),
+	HTML('2020 Felix Schönbrodt, <a href="https://www.nicebread.de"  target="_blank">https://www.nicebread.de</a>')
 ))
