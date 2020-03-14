@@ -76,7 +76,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		),
 			
 		column(8,
-			htmlOutput("res"),
+			plotlyOutput("res", height="600px"),
 			downloadButton("DownloadFig", "Download Plot")
 		)			
 	),

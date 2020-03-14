@@ -8,6 +8,7 @@ library(stringr)
 library(lubridate)
 library(tidyr)
 library(magrittr)
+library(plotly)
 options(shiny.sanitize.errors = FALSE)
 
 # load population data: How many people live in each country?
@@ -301,7 +302,7 @@ shinyServer(function(input, output, session) {
 	
 	
 	# the plot
-	output$res <- renderUI({
+	output$res <- renderPlotly({
 		
 	  print("PLOT:")
 		print(str(dat_selection()))
@@ -315,7 +316,8 @@ shinyServer(function(input, output, session) {
 		p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color="country")) + 
 			geom_point() + 
 			geom_line() + 
-			geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE) + scale_color_discrete(guide = FALSE) +
+			#geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE) + 
+			scale_color_discrete(guide = FALSE) +
 			theme_bw() + 
 			xlab(paste0("Days since ", input$start_cumsum, "th case")) + 
 			ylab(y_label) +
@@ -325,10 +327,10 @@ shinyServer(function(input, output, session) {
 		  p1 <- p1 + coord_trans(y = "log10")
 		}
 		if (input$target == "cum_cases") {
-			p1 <- p1 + scale_y_continuous(breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000))
+		  p1 <- p1 + scale_y_continuous(breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000))
 		}
 		if (input$target == "cum_cases_per_100000") {
-			p1 <- p1 + scale_y_continuous()
+		  p1 <- p1 + scale_y_continuous()
 		}
 		
 		if (input$showReferenceLine == TRUE) {
@@ -337,9 +339,7 @@ shinyServer(function(input, output, session) {
 		    annotate(label=paste0(input$percGrowth, "% growth rate"), x=max_day_since_start(), y=growth(max_day_since_start()+1, percGrowth=input$percGrowth, intercept=input$offset), geom="text", hjust=1)
 		}
 				
-		return(tagList(
-		  renderPlot(p1, res=100, height=600, width="auto")
-		))
+		return(p1)
 	
 	})
 	

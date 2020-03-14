@@ -9,3 +9,5 @@ install.packages("lubridate")
 install.packages("tidyr")
 install.packages("magrittr")
 install.packages("bit64")
+install.packages("plotly")
+
