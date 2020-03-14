@@ -273,4 +273,26 @@ shinyServer(function(input, output, session) {
 	
 	})
 	
+	output$DownloadFig <- downloadHandler(
+	  filename = "COVID19.pdf",
+	  content = function(file){
+	    tempReport <- file.path(tempdir(), "COVID19.Rmd")
+	    file.copy("COVID19.Rmd", tempReport, overwrite = TRUE)
+	    params <- list(dat_selection = dat_selection(),
+	                   logScale = input$logScale,
+	                   start_cumsum = input$start_cumsum,
+	                   datasource = input$datasource,
+	                   current_data_date = current_data_date(),
+	                   percGrowth = input$percGrowth,
+	                   offset = input$offset,
+	                   max_day_since_start = max_day_since_start(),
+	                   showReferenceLine = input$showReferenceLine
+	    )
+	    rmarkdown::render(tempReport, output_file = file,
+	                      params = params,
+	                      envir = new.env(parent = globalenv())
+	    )
+	  }
+	)
+	
 })

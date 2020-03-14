@@ -66,7 +66,8 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		),
 			
 		column(8,
-			htmlOutput("res")
+			htmlOutput("res"),
+			downloadButton("DownloadFig", "Download")
 		)			
 	),
 	HTML('This visualization is based on a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>.<br>'),
