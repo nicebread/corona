@@ -102,6 +102,10 @@ dat_ECDC <- dat0_ECDC %>%
 		country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
 	)
 	
+
+dat_ECDC$country[dat_ECDC$country == "South Korea"] <- "Korea"
+dat_ECDC$country[dat_ECDC$country == "United States of America"] <- "USA"
+	
 dat_ECDC <- inner_join(dat_ECDC, pop, by="country") %>%
   mutate(cum_cases_per_100000 = cum_cases / (population/100000))
 
@@ -137,20 +141,14 @@ dat_CSSE <- dat0_CSSE %>%
 		country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
 	)
 	
+dat_CSSE$country[dat_CSSE$country == "Korea, South"] <- "Korea"
+dat_CSSE$country[dat_CSSE$country == "US"] <- "USA"
+
 dat_CSSE <- inner_join(dat_CSSE, pop, by="country") %>%
   mutate(cum_cases_per_100000 = cum_cases / (population/100000))
 
 CSSE_data_date <- max(dat_CSSE$date)
 
-
-# ---------------------------------------------------------------------
-#  Harmonize country labels between data sets	
-
-dat_ECDC$country[dat_ECDC$country == "South Korea"] <- "Korea"
-dat_ECDC$country[dat_ECDC$country == "United States of America"] <- "USA"
-
-dat_CSSE$country[dat_CSSE$country == "Korea, South"] <- "Korea"
-dat_CSSE$country[dat_CSSE$country == "US"] <- "USA"
 
 
 
