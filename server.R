@@ -7,10 +7,13 @@ library(ggrepel)
 library(stringr)
 library(lubridate)
 library(tidyr)
+library(magrittr)
 
 today <- Sys.Date()
-last_ECDC_download <- str_match(list.files(pattern="ECDC"), "_(.*)\\.xls")[1, 2]
-last_CSSE_download <- str_match(list.files(pattern="CSSE"), "_(.*)\\.csv")[1, 2]
+recent_ECDC_file <- list.files(pattern="ECDC") %>% tail(1)
+recent_CSSE_file <- list.files(pattern="CSSE") %>% tail(1)
+last_ECDC_download <- recent_ECDC_file %>% str_match(pattern="_(.*)\\.xls") %>% extract2(2)
+last_CSSE_download <- recent_CSSE_file %>% str_match(pattern="_(.*)\\.csv") %>% extract2(2)
 
 ## ======================================================================
 ## Download latest data
@@ -25,6 +28,8 @@ last_CSSE_download <- str_match(list.files(pattern="CSSE"), "_(.*)\\.csv")[1, 2]
 ## https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_daily_reports
 ## ======================================================================
 	
+if (today < last_ECDC_download)	{	
+	print("Downloading recent ECDC data file from Github ...")
 	
 	# try ten days from today backwards to download the latest data file	
 	ECDC_success <- FALSE
@@ -46,13 +51,24 @@ last_CSSE_download <- str_match(list.files(pattern="CSSE"), "_(.*)\\.csv")[1, 2]
 		}
 		)
 	}
+} else {
+	print("No updated ECDC file available.")
+}
 	
-download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("CSSE_", today, ".csv"))	
+if (today < last_CSSE_download)	{
+	print("Downloading recent CSSE data file from Github ...")
+	download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("CSSE_", today, ".csv"))	
+	
+	recent_CSSE_file <- list.files(pattern="CSSE") %>% tail(1)
+	last_CSSE_download <- today
+} else {
+	print("No updated CSSE file available.")
+}
 
 
 # load data files
-dat0_ECDC <- import(paste0("ECDC_", ECDC_dataDate, ".xls"))
-dat0_CSSE <- import(paste0("CSSE_", today, ".csv"))
+dat0_ECDC <- import(recent_ECDC_file)
+dat0_CSSE <- import(recent_CSSE_file)
 
 # preprocess the data sets, make common format
 dat_ECDC <- dat0_ECDC %>% 
@@ -76,10 +92,12 @@ dat_ECDC <- dat0_ECDC %>%
 		# country label only at the last data point of each timeline:
 		country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
 	)
-dat_ECDC$country[dat_ECDC$country == "South Korea"] <- "Korea, South"
-
+	
 ECDC_data_date <- max(dat_ECDC$date)
 
+
+# ---------------------------------------------------------------------
+#  Preprocess CSSE data
 
 dat0_CSSE <- dat0_CSSE %>% select(-1, -3, -4)
 colnames(dat0_CSSE)[1] <- c("country")
@@ -108,6 +126,17 @@ dat_CSSE <- dat0_CSSE %>%
 	)
 	
 CSSE_data_date <- max(dat_CSSE$date)
+
+
+# ---------------------------------------------------------------------
+#  Harmonize country labels between data sets	
+
+dat_ECDC$country[dat_ECDC$country == "South Korea"] <- "Korea, South"
+dat_ECDC$country[dat_ECDC$country == "United States of America"] <- "USA"
+
+dat_CSSE$country[dat_CSSE$country == "US"] <- "USA"
+
+
 
 # helper function for reference line
 growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
