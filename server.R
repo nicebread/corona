@@ -9,6 +9,14 @@ library(lubridate)
 library(tidyr)
 library(magrittr)
 
+# load population data: How many people live in each country?
+pop <- import("data/API_SP.POP.TOTL_DS2_en_csv_v2_821007.csv", header=TRUE)
+pop$country <- pop[, 1]
+pop$population <- pop[, "2018"]
+pop <- pop %>% select(country, population) %>% arrange(country)
+pop[pop$country == "Korea, Rep.", "country"] <- "Korea"
+pop[pop$country == "United States", "country"] <- "USA"
+
 today <- Sys.Date()
 recent_ECDC_file <- list.files(pattern="ECDC") %>% tail(1)
 recent_CSSE_file <- list.files(pattern="CSSE") %>% tail(1)
@@ -93,6 +101,9 @@ dat_ECDC <- dat0_ECDC %>%
 		country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
 	)
 	
+dat_ECDC <- inner_join(dat_ECDC, pop, by="country") %>%
+  mutate(cum_cases_per_100000 = cum_cases / (population/100000))
+
 ECDC_data_date <- max(dat_ECDC$date)
 
 
@@ -125,15 +136,19 @@ dat_CSSE <- dat0_CSSE %>%
 		country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
 	)
 	
+dat_CSSE <- inner_join(dat_CSSE, pop, by="country") %>%
+  mutate(cum_cases_per_100000 = cum_cases / (population/100000))
+
 CSSE_data_date <- max(dat_CSSE$date)
 
 
 # ---------------------------------------------------------------------
 #  Harmonize country labels between data sets	
 
-dat_ECDC$country[dat_ECDC$country == "South Korea"] <- "Korea, South"
+dat_ECDC$country[dat_ECDC$country == "South Korea"] <- "Korea"
 dat_ECDC$country[dat_ECDC$country == "United States of America"] <- "USA"
 
+dat_CSSE$country[dat_CSSE$country == "Korea, South"] <- "Korea"
 dat_CSSE$country[dat_CSSE$country == "US"] <- "USA"
 
 
@@ -143,8 +158,7 @@ growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/1
 
 # estimate growth curve
 #day = dat_ECDC %>% filter(country=="Germany", cum_cases > 50) %>% pull("day_in_dataset")
-#day = day - min(day) + 1
-#cases = dat_ECDC %>% filter(country=="Germany", cum_cases > 50) %>% pull("cum_cases")
+#cases = dat_ECDC %>% filter(country=="Germany", cum_cases > 50) %>% pull("cum_cases_per_100000")
 
 estimate_daily_growth_rate <- function(day, cases, min_cases) {
   fit_nls <- nls(cases ~ intercept*(1+b)^day, start = c(b = 0.30, intercept = min_cases))
@@ -196,7 +210,7 @@ shinyServer(function(input, output, session) {
 		} else {
 			# default value at app start
 		  print("SELECTOR: USING DEFAULT SELECTION")
-			selection <- intersect(c("Iran", "Singapore", "United Kingdom", "Sweden", "Germany", "United States of America", "France", "Italy", "Spain", "South Korea"), available_countries)
+			selection <- intersect(c("Iran", "Singapore", "United Kingdom", "Sweden", "Germany", "USA", "France", "Italy", "Spain", "Korea"), available_countries)
 			startupflag <<- FALSE
 		}
 	  
@@ -245,20 +259,41 @@ shinyServer(function(input, output, session) {
 	})
 	
 	
-	observeEvent(input$estimateGrowth, {
+	# on target change: update sliders
+	observeEvent(input$target, { 
+		isolate({
+			if (input$target == "cum_cases") 
+				updateSliderInput(session, "offset", min = 1, max = 1000, value = 100, step = 1)
+			if (input$target == "cum_cases_per_100000") 
+				updateSliderInput(session, "offset", value = 0.1, min = 0, max = 2, step = 0.05)	
+		})
+	})
+	
+	observeEvent(c(input$estimateGrowth, input$target, dat_selection()), {
 	  print("estimation BUTTON")
 	  isolate({
 	    # decrease day_since_start by 1, so that it starts with 0, and the intercept is the actual intercept in the plot
+			fit <- NULL
 	    tryCatch({
-	      fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_cases, min_cases=input$start_cumsum)
+				if (input$target == "cum_cases") {
+					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_cases, min_cases=input$start_cumsum)
+				}
+				if (input$target == "cum_cases_per_100000") {
+					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_cases_per_100000, min_cases=0.1)
+				}
 	    },
-	    error=function(e) return()
+	    error=function(e) return(NULL)
 	  )
 	  })
 	  
-	  print(summary(fit))
-	  updateSliderInput(session, "offset", value = as.numeric(round(coef(fit)["intercept"])))
-	  updateSliderInput(session, "percGrowth", value = as.numeric(round(coef(fit)["b"]*100)))
+		if (!is.null(fit)) {
+			print(summary(fit))
+		  updateSliderInput(session, "offset", value = as.numeric(coef(fit)["intercept"]))
+		  updateSliderInput(session, "percGrowth", value = as.numeric(coef(fit)["b"]*100))
+		} else {
+			print("no fit possible")
+		}
+	  
 	})
 	
 	
@@ -272,12 +307,11 @@ shinyServer(function(input, output, session) {
 			return(list(h3("No data selected.")))
 		}
 	  
-		y_label <- paste0("Cumulative number of confirmed cases", ifelse(input$logScale == TRUE, " (log scale)", ""))
+		y_label <- paste0("Cumulative number of confirmed cases", ifelse(input$logScale == TRUE, " (log scale)", ""), ifelse(input$target == "cum_cases_per_100000", ", per 100,000", ""))
 		
-		p1 <- ggplot(dat_selection(), aes(x=day_since_start, y=cum_cases, color=country)) + 
+		p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color="country")) + 
 			geom_point() + 
 			geom_line() + 
-			scale_y_continuous(breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000)) + 
 			geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE) + scale_color_discrete(guide = FALSE) +
 			theme_bw() + 
 			xlab(paste0("Days since ", input$start_cumsum, "th case")) + 
@@ -286,6 +320,12 @@ shinyServer(function(input, output, session) {
 		
 		if (input$logScale == TRUE) {
 		  p1 <- p1 + coord_trans(y = "log10")
+		}
+		if (input$target == "cum_cases") {
+			p1 <- p1 + scale_y_continuous(breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000))
+		}
+		if (input$target == "cum_cases_per_100000") {
+			p1 <- p1 + scale_y_continuous()
 		}
 		
 		if (input$showReferenceLine == TRUE) {

@@ -43,12 +43,16 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		  h3("Data source:"),
 			  radioButtons("datasource", "", c("European Centre for Disease Prevention and Control" = "ECDC", "Johns Hopkins CSSE" = "CSSE")),
 			
-			h3("Display options:"),
+		  h3("Target variable:"),
+		    radioButtons("target", "", c("Confirmed cumulative cases" = "cum_cases", "Confirmed cumulative cases per 100,000" = "cum_cases_per_100000")),
+		  
+		  
+		  h3("Display options:"),
 			  checkboxInput("logScale", "Print y-axis as log scale", value=FALSE),
 			
+			
 			h3("Reference line:"),
-			  p("If you click on the button, both intercept and exponential growth rate are estimated from the current data in the plot. Using the two sliders, you can manually adjust the reference line.", 
-			  style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"
+			  p("If you click on the button, both intercept and exponential growth rate are estimated from the current data in the plot. Using the two sliders, you can manually adjust the reference line.", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"
 			  ),
 			  actionButton("estimateGrowth", "Fit growth rate to current country selection"),
 			  checkboxInput("showReferenceLine", "Show reference line", value=TRUE),
@@ -77,6 +81,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		)			
 	),
 	HTML('This visualization is inspired by a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>.<br>'),
-	HTML('Data sources: <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide"  target="_blank">European Centre for Disease Prevention and Control</a> and <a href="https://github.com/CSSEGISandData/COVID-19"  target="_blank">Johns Hopkins CSSE</a> (both are updated daily)<br><br>'),
+	HTML('Data sources for Covid-19 cases : <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide"  target="_blank">European Centre for Disease Prevention and Control</a> and <a href="https://github.com/CSSEGISandData/COVID-19"  target="_blank">Johns Hopkins CSSE</a> (both are updated daily)<br>'),
+	HTML('Data sources for country population: <a href="https://data.worldbank.org/indicator/SP.POP.TOTL"  target="_blank">The World Bank data</a><br><br>'),
 	HTML('2020. Contributors: Felix Schönbrodt, <a href="https://www.nicebread.de"  target="_blank">https://www.nicebread.de</a>, Angelika Stefan')
 ))
