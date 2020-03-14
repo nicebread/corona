@@ -127,9 +127,7 @@ dat_CSSE_US_states <- dat0_CSSE %>%
   dplyr::filter(., country == 'US', !grepl(',',state), state != 'Grand Princess') %>% #filter out county-level data
   dplyr::select(-country, -Lat, -Long) %>%
   pivot_longer(-1, names_to="date.original", values_to="cum_cases") %>% 
-  
-  # aggregate countries which have multiple states in the data base
-  group_by(state, date.original) %>%
+    group_by(state, date.original) %>%
   summarise(cum_cases = sum(cum_cases)) %>%
   ungroup() %>%
   mutate(
@@ -156,7 +154,7 @@ dat0_CSSE <- dat0_CSSE %>% select(-1, -3, -4)
 colnames(dat0_CSSE)[1] <- c("country")
 
 
-# transform to long format
+# transform to long format for country data
 dat_CSSE <- dat0_CSSE %>% 
 	pivot_longer(-1, names_to="date.original", values_to="cum_cases") %>% 
   
@@ -187,8 +185,6 @@ dat_CSSE <- inner_join(dat_CSSE, pop, by="country") %>%
 CSSE_data_date <- max(dat_CSSE$date)
 
 
-
-
 # helper function for reference line
 growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
 
@@ -203,6 +199,7 @@ estimate_daily_growth_rate <- function(day, cases, min_cases) {
 
 shinyServer(function(input, output, session) {
   
+  # Startup flags to indicate whether server has just started up (in which case use defaults) for both state/country
   startupflag <- TRUE
   startupflag_state <- TRUE
   
@@ -288,12 +285,11 @@ shinyServer(function(input, output, session) {
 	  # keep the states that were chosen before
 	  if (startupflag_state == FALSE) {
 	    selection <- intersect(isolate(last_state_selection()), available_states)
-	    #}
 	  } else {
 	    # default value at app start
 	    print("SELECTOR: USING DEFAULT SELECTION")
+	    # Default states at start based on highest totals as of 3/14/2020
 	    selection <- intersect(c("California", "New York", "Massachusetts", "Washington"), available_states)
-	    #startupflag_state <<- FALSE
 	  }
 	  
 	  tagList(checkboxGroupInput(inputId = "state_selection", #name of input

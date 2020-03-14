@@ -63,6 +63,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			  style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"),
 			sliderInput("minCases", label = "Minimum overall cases per country/state:", min = 1, max = 10000, value = 100, step = 10),	
 			sliderInput("start_cumsum", label = "Start display at the day with at least X cumulative cases:", min = 1, max = 1000, value = 100, step = 1),	
+			# Panels for selecting states/countries appear conditionally based on the chosen data
 			conditionalPanel(
 			  condition = "input.datasource == 'CSSE_State'",
 			  h2("State selection:"),
