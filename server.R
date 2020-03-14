@@ -1,4 +1,4 @@
-# 2020 Felix Schönbrodt, CC0 license (free to reuse without need of attribution)
+# 2020 Felix Schönbrodt, MIT license
 # This data visualization is inspired by the Financial Times: https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441
 library(shiny)
 library(rio)
@@ -8,6 +8,7 @@ library(stringr)
 library(lubridate)
 library(tidyr)
 library(magrittr)
+options(shiny.sanitize.errors = FALSE)
 
 # load population data: How many people live in each country?
 pop <- import("data/API_SP.POP.TOTL_DS2_en_csv_v2_821007.csv", header=TRUE)
@@ -265,12 +266,16 @@ shinyServer(function(input, output, session) {
 			if (input$target == "cum_cases") 
 				updateSliderInput(session, "offset", min = 1, max = 1000, value = 100, step = 1)
 			if (input$target == "cum_cases_per_100000") 
-				updateSliderInput(session, "offset", value = 0.1, min = 0, max = 2, step = 0.05)	
+				updateSliderInput(session, "offset", value = 0.1, min = 0, max = 5, step = 0.05)	
 		})
 	})
 	
 	observeEvent(c(input$estimateGrowth, input$target, dat_selection()), {
 	  print("estimation BUTTON")
+		if (isolate(input$showReferenceLine == FALSE)) {
+			print("Skipping estimation, no reference line shown")
+			return()
+		}
 	  isolate({
 	    # decrease day_since_start by 1, so that it starts with 0, and the intercept is the actual intercept in the plot
 			fit <- NULL
