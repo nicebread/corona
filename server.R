@@ -141,6 +141,16 @@ dat_CSSE$country[dat_CSSE$country == "US"] <- "USA"
 # helper function for reference line
 growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
 
+# estimate growth curve
+#day = dat_ECDC %>% filter(country=="Germany", cum_cases > 50) %>% pull("day_in_dataset")
+#day = day - min(day) + 1
+#cases = dat_ECDC %>% filter(country=="Germany", cum_cases > 50) %>% pull("cum_cases")
+
+estimate_daily_growth_rate <- function(day, cases, min_cases) {
+  fit_nls <- nls(cases ~ intercept*(1+b)^day, start = c(b = 0.30, intercept = min_cases))
+  return(fit_nls)
+}
+
 shinyServer(function(input, output, session) {
   
   startupflag <- TRUE
@@ -235,6 +245,23 @@ shinyServer(function(input, output, session) {
 	})
 	
 	
+	observeEvent(input$estimateGrowth, {
+	  print("estimation BUTTON")
+	  isolate({
+	    # decrease day_since_start by 1, so that it starts with 0, and the intercept is the actual intercept in the plot
+	    tryCatch({
+	      fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_cases, min_cases=input$start_cumsum)
+	    },
+	    error=function(e) return()
+	  )
+	  })
+	  
+	  print(summary(fit))
+	  updateSliderInput(session, "offset", value = as.numeric(round(coef(fit)["intercept"])))
+	  updateSliderInput(session, "percGrowth", value = as.numeric(round(coef(fit)["b"]*100)))
+	})
+	
+	
 	# the plot
 	output$res <- renderUI({
 		
@@ -245,7 +272,7 @@ shinyServer(function(input, output, session) {
 			return(list(h3("No data selected.")))
 		}
 	  
-		y_label <- paste0("Cumulative number of diagnosed cases", ifelse(input$logScale == TRUE, " (log scale)", ""))
+		y_label <- paste0("Cumulative number of confirmed cases", ifelse(input$logScale == TRUE, " (log scale)", ""))
 		
 		p1 <- ggplot(dat_selection(), aes(x=day_since_start, y=cum_cases, color=country)) + 
 			geom_point() + 
