@@ -41,7 +41,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		
 		column(4,
 		  h3("Data source:"),
-			  radioButtons("datasource", "", c("European Centre for Disease Prevention and Control" = "ECDC", "Johns Hopkins CSSE" = "CSSE")),
+			  radioButtons("datasource", "", c("European Centre for Disease Prevention and Control" = "ECDC", "Johns Hopkins CSSE" = "CSSE", 'Johns Hopkins CSSE - US States' = 'CSSE_State')),
 			
 		  h3("Target variable:"),
 		    radioButtons("target", "", c("Confirmed cumulative cases" = "cum_cases", "Confirmed cumulative cases per 100,000" = "cum_cases_per_100000")),
@@ -58,23 +58,22 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			  checkboxInput("showReferenceLine", "Show reference line", value=TRUE),
 			  sliderInput("percGrowth", label = "% daily growth:", min = 0, max = 100, value = 33, step = 1),
 			  sliderInput("offset", label = "Offset at start:", min = 1, max = 1000, value = 100, step = 1),
-			
 			h3("Filter:"),
-			  p("Filter countries that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 
+			p("Filter countries/states that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 
 			  style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"),
-			  sliderInput("minCases", label = "Minimum overall cases per country:", min = 1, max = 10000, value = 100, step = 10),	
-			  sliderInput("start_cumsum", label = "Start display at the day with at least X cumulative cases:", min = 1, max = 1000, value = 100, step = 1),	
-				
-			h2("Country selection:"),
-			  actionButton("selectAllCountries", "Select all countries"),
-			  actionButton("deselectAllCountries", "Deselect all countries"),
-			  htmlOutput("country_selector")
+			sliderInput("minCases", label = "Minimum overall cases per country/state:", min = 1, max = 10000, value = 100, step = 10),	
+			sliderInput("start_cumsum", label = "Start display at the day with at least X cumulative cases:", min = 1, max = 1000, value = 100, step = 1),	
 			
-			# ---------------------------------------------------------------------
-			# Output column
-			
-		),
-			
+  		conditionalPanel(
+  		  condition = "input.datasource != 'CSSE_State'",
+  			h2("Country selection:"),
+  			  actionButton("selectAllCountries", "Select all countries"),
+  			  actionButton("deselectAllCountries", "Deselect all countries"),
+  			  htmlOutput("country_selector")
+  			
+  			# ---------------------------------------------------------------------
+  			# Output column
+  		)),
 		column(8,
 			htmlOutput("res"),
 			downloadButton("DownloadFig", "Download Plot")
