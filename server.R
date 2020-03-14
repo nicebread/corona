@@ -19,8 +19,10 @@ pop[pop$country == "Korea, Rep.", "country"] <- "Korea"
 pop[pop$country == "United States", "country"] <- "USA"
 
 # load in state population data
-
-
+# State population data from 2019 US Census: https://www.census.gov/data/datasets/time-series/demo/popest/2010s-state-total.html
+state_pop = read.csv('data/state_population_estimates_2019.csv', stringsAsFactors = FALSE) %>%
+  mutate(., population = as.numeric(gsub(',', '', population_2019))) %>%
+  dplyr::select(., -population_2019)
 
 today <- Sys.Date()
 recent_ECDC_file <- list.files(pattern="ECDC") %>% tail(1)
@@ -122,7 +124,7 @@ ECDC_data_date <- max(dat_ECDC$date)
 # transform to long format with state-by-state US data
 dat_CSSE_US_states <- dat0_CSSE %>%
   dplyr::select(., state = `Province/State`, country = `Country/Region`, everything()) %>%
-  dplyr::filter(., country == 'US', !grepl(',',state)) %>% #filter out county-level data
+  dplyr::filter(., country == 'US', !grepl(',',state), state != 'Grand Princess') %>% #filter out county-level data
   dplyr::select(-country, -Lat, -Long) %>%
   pivot_longer(-1, names_to="date.original", values_to="cum_cases") %>% 
   
@@ -145,7 +147,9 @@ dat_CSSE_US_states <- dat0_CSSE %>%
     # keep country label as USA for all US state data
     country = 'USA',
     country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
-  )
+  ) %>%
+  left_join(state_pop, by = 'state') %>%
+  mutate(cum_cases_per_100000 = cum_cases / (population/100000))
 
 
 dat0_CSSE <- dat0_CSSE %>% select(-1, -3, -4)
@@ -200,6 +204,7 @@ estimate_daily_growth_rate <- function(day, cases, min_cases) {
 shinyServer(function(input, output, session) {
   
   startupflag <- TRUE
+  startupflag_state <- TRUE
   
   # dat_startfilter stores the reduced data set (reduced by input$start_cumsum)
   dat_startfilter <- reactiveVal(data.frame())
@@ -227,7 +232,9 @@ shinyServer(function(input, output, session) {
     ))
   })
   
-  
+
+# Country Selection -------------------------------------------------------
+
 	# dynamically populate country selector, based on available choices AFTER the start_cumsum filter
   last_country_selection <- reactiveVal()
   observe({
@@ -235,60 +242,115 @@ shinyServer(function(input, output, session) {
     last_country_selection(input$country_selection)
   })
   
-  #if (input$datasource != 'CSSE_State'){
-  	output$country_selector <- renderUI({
-  	  print(paste0("SELECTOR; startupflag = ", startupflag))
-  	  
-  	  available_countries <- unique(dat_startfilter()$country)
-  	  
-  	  # keep the countries that were chosen before
-  		if (startupflag == FALSE) {
-  	  	selection <- intersect(isolate(last_country_selection()), available_countries)
-  		} else {
-  			# default value at app start
-  		  print("SELECTOR: USING DEFAULT SELECTION")
-  			selection <- intersect(c("Iran", "Singapore", "United Kingdom", "Sweden", "Germany", "USA", "France", "Italy", "Spain", "Korea"), available_countries)
-  			startupflag <<- FALSE
-  		}
-  	  
-  		tagList(checkboxGroupInput(inputId = "country_selection", #name of input
-  		 label = "Countries to display:",
-  		 choices = available_countries,
-  		 selected = selection))
-  	})
-  	observeEvent(input$selectAllCountries, {
-  	  print("selectALL BUTTON")
-  	  available_countries <- unique(dat_startfilter()$country)
-  	  updateCheckboxGroupInput(session, "country_selection", selected = available_countries)
-  	})
-  	observeEvent(input$deselectAllCountries, {
-  	  print("DEselectALL BUTTON")
-  	  updateCheckboxGroupInput(session, "country_selection", selected = "")
-  	})
-  #}
+  output$country_selector <- renderUI({
+    print(paste0("SELECTOR; startupflag = ", startupflag))
+    
+    available_countries <- unique(dat_startfilter()$country)
+    
+    # keep the countries that were chosen before
+    if (startupflag == FALSE) {
+      selection <- intersect(isolate(last_country_selection()), available_countries)
+    } else {
+      # default value at app start
+      print("SELECTOR: USING DEFAULT SELECTION")
+      selection <- intersect(c("Iran", "Singapore", "United Kingdom", "Sweden", "Germany", "USA", "France", "Italy", "Spain", "Korea"), available_countries)
+      startupflag <<- FALSE
+    }
+    
+    tagList(checkboxGroupInput(inputId = "country_selection", #name of input
+                               label = "Countries to display:",
+                               choices = available_countries,
+                               selected = selection))
+  })
+  observeEvent(input$selectAllCountries, {
+    print("selectALL BUTTON")
+    available_countries <- unique(dat_startfilter()$country)
+    updateCheckboxGroupInput(session, "country_selection", selected = available_countries)
+  })
+  observeEvent(input$deselectAllCountries, {
+    print("DEselectALL BUTTON")
+    updateCheckboxGroupInput(session, "country_selection", selected = "")
+  })
   
-  
-	# dat_selection stores the data set filterd by country selection
-	dat_selection <- reactiveVal(data.frame())
-	max_day_since_start <- reactiveVal(NA)
-	observe({
-	    print("DAT_SELCTION")
-	    if (!is.null(input$country_selection)) {
-	      print(input$country_selection)
-	      d0 <- dat_startfilter() %>% filter(country %in% input$country_selection)
-	      
-	      if (nrow(d0) > 0) {
-	        dat_selection(d0 %>% mutate(day_since_start = 1:n()))
-	        max_day_since_start(max(dat_selection()$day_since_start))
-	      } else {
-	        dat_selection(data.frame())
-	      }
 
-	    } else {
-	      dat_selection(data.frame())
-	    }
+# State Selection ---------------------------------------------------------
+	# dynamically populate state selector, based on available choices AFTER the start_cumsum filter
+	last_state_selection <- reactiveVal()
+	observe({
+	  print(paste("last_state_selection update: ", paste(input$state_selection, collapse=", ")))
+	  last_state_selection(input$state_selection)
 	})
 	
+	output$state_selector <- renderUI({
+	  print(paste0("SELECTOR; startupflag_state = ", startupflag_state))
+	  available_states <- unique(dat_startfilter()$state)
+
+	  # keep the states that were chosen before
+	  if (startupflag_state == FALSE) {
+	    selection <- intersect(isolate(last_state_selection()), available_states)
+	    #}
+	  } else {
+	    # default value at app start
+	    print("SELECTOR: USING DEFAULT SELECTION")
+	    selection <- intersect(c("California", "New York", "Massachusetts", "Washington"), available_states)
+	    #startupflag_state <<- FALSE
+	  }
+	  
+	  tagList(checkboxGroupInput(inputId = "state_selection", #name of input
+	                             label = "States to display:",
+	                             choices = available_states,
+	                             selected = selection))
+	})
+	observeEvent(input$selectAllStates, {
+	  print("selectALL BUTTON")
+	  available_states <- unique(dat_startfilter()$state)
+	  updateCheckboxGroupInput(session, "state_selection", selected = available_states)
+	})
+	observeEvent(input$deselectAllStates, {
+	  print("DEselectALL BUTTON")
+	  updateCheckboxGroupInput(session, "state_selection", selected = "")
+	})
+	
+	# dat_selection stores the data set filterd by state selection
+  	dat_selection <- reactiveVal(data.frame())
+  	max_day_since_start <- reactiveVal(NA)
+  	observe({
+  	  print("DAT_SELCTION_STATE")
+  	  if(input$datasource == 'CSSE_State'){
+    	  if (!is.null(input$state_selection)) {
+    	    print(input$state_selection)
+    	    d0 <- dat_startfilter() %>% filter(state %in% input$state_selection)
+    	    
+    	    if (nrow(d0) > 0) {
+    	      dat_selection(d0 %>% mutate(day_since_start = 1:n()))
+    	      max_day_since_start(max(dat_selection()$day_since_start))
+    	    } else {
+    	      dat_selection(data.frame())
+    	    }
+    	    
+    	  } else {
+    	    dat_selection(data.frame())
+    	  }
+  	  }else{
+  	    print("DAT_SELCTION_COUNTRY")
+  	    if (!is.null(input$country_selection)) {
+  	      print(input$country_selection)
+  	      d0 <- dat_startfilter() %>% filter(country %in% input$country_selection)
+  	      
+  	      if (nrow(d0) > 0) {
+  	        dat_selection(d0 %>% mutate(day_since_start = 1:n()))
+  	        max_day_since_start(max(dat_selection()$day_since_start))
+  	      } else {
+  	        dat_selection(data.frame())
+  	      }
+  	      
+  	    } else {
+  	      dat_selection(data.frame())
+  	    }
+  	  }
+  	 
+  	})
+  	
 	# update offset slider when start_cumsum changes
 	observe({
 	  print("UPDATE OFFSET SLIDER")
@@ -351,8 +413,8 @@ shinyServer(function(input, output, session) {
 	  
 		y_label <- paste0("Cumulative number of confirmed cases", ifelse(input$logScale == TRUE, " (log scale)", ""), ifelse(input$target == "cum_cases_per_100000", ", per 100,000", ""))
 		
-		
-	if (! 'state' %in% names(dat_selection())){
+	# Plot countries
+	if (!'state' %in% names(dat_selection())){
 		p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='country')) + 
 			geom_point() + 
 			geom_line() + 
@@ -360,9 +422,9 @@ shinyServer(function(input, output, session) {
 			theme_bw() + 
 			xlab(paste0("Days since ", input$start_cumsum, "th case")) + 
 			ylab(y_label) +
-			ggtitle(paste0("Visualization based on data from", input$datasource, ". Data set from ", current_data_date()))
-	}else{
-	  print('IDENTICAL')
+			ggtitle(paste0("Visualization based on data from ", input$datasource, ". Data set from ", current_data_date()))
+	}else{ 
+	  # Plot US states
 	  p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='state')) + 
 	    geom_point() + 
 	    geom_line() + 
@@ -371,6 +433,7 @@ shinyServer(function(input, output, session) {
 	    xlab(paste0("Days since ", input$start_cumsum, "th case")) + 
 	    ylab(y_label) +
 	    ggtitle(paste0("Visualization based on data from CSSE US data by state. Data set from ", current_data_date()))
+	  startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
 	}
 		if (input$logScale == TRUE) {
 		  p1 <- p1 + coord_trans(y = "log10")
