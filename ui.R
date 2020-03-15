@@ -88,9 +88,9 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			downloadButton("DownloadFig", "Download Plot")
 		)			
 	),
-	HTML('This visualization is inspired by a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>.<br>'),
+	HTML('This visualization is inspired by a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>, created by <a href="https://twitter.com/jburnmurdoch" target="_blank">John Burn-Murdoch</a>.<br>'),
 	HTML('Data sources for Covid-19 cases : <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide"  target="_blank">European Centre for Disease Prevention and Control</a> and <a href="https://github.com/CSSEGISandData/COVID-19"  target="_blank">Johns Hopkins CSSE</a> (both are updated daily)<br>'),
 	HTML('Data sources for country population: <a href="https://data.worldbank.org/indicator/SP.POP.TOTL"  target="_blank">The World Bank data</a><br><br>'),
-	HTML('2020. Contributors: Felix Schönbrodt, <a href="https://www.nicebread.de"  target="_blank">https://www.nicebread.de</a>, Angelika Stefan, Philipp Zumstein<br>'),
+	HTML('2020. Contributors: <a href="https://www.nicebread.de" target="_blank">Felix Schönbrodt</a>, <a href="https://github.com/astefan1" target="_blank">Angelika Stefan</a>, <a href="https://github.com/zuphilip"  target="_blank">Philipp Zumstein</a>, <a href="https://github.com/pab2163" target="_blank">Paul A. Bloom</a><br>'),
 	HTML('Open source code on Github: <a href="https://github.com/nicebread/corona"  target="_blank">https://github.com/nicebread/corona</a>')
 ))

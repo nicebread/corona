@@ -10,7 +10,7 @@ library(tidyr)
 library(magrittr)
 options(shiny.sanitize.errors = FALSE)
 
-# load population data: How many people live in each country?
+# load country level population data: How many people live in each country?
 pop <- import("data/API_SP.POP.TOTL_DS2_en_csv_v2_821007.csv", header=TRUE)
 pop$country <- pop[, 1]
 pop$population <- pop[, "2018"]
@@ -18,7 +18,7 @@ pop <- pop %>% select(country, population) %>% arrange(country)
 pop[pop$country == "Korea, Rep.", "country"] <- "Korea"
 pop[pop$country == "United States", "country"] <- "USA"
 
-# load in state population data
+# load in US state population data
 # State population data from 2019 US Census: https://www.census.gov/data/datasets/time-series/demo/popest/2010s-state-total.html
 state_pop = read.csv('data/state_population_estimates_2019.csv', stringsAsFactors = FALSE) %>%
   mutate(., population = as.numeric(gsub(',', '', population_2019))) %>%
@@ -185,7 +185,7 @@ dat_CSSE <- inner_join(dat_CSSE, pop, by="country") %>%
 CSSE_data_date <- max(dat_CSSE$date)
 
 
-# helper function for reference line
+# helper function for exponential reference line
 growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
 
 # estimate growth curve
@@ -199,13 +199,13 @@ estimate_daily_growth_rate <- function(day, cases, min_cases) {
 
 shinyServer(function(input, output, session) {
   
-  # Startup flags to indicate whether server has just started up (in which case use defaults) for both state/country
+  # Startup flags to indicate whether session has just started up (in which case use defaults) for both state/country
   startupflag <- TRUE
   startupflag_state <- TRUE
   
   # dat_startfilter stores the reduced data set (reduced by input$start_cumsum)
   dat_startfilter <- reactiveVal(data.frame())
-	current_data_date <- reactiveVal(NA)
+	current_data_date <- reactiveVal(NA)  # stores the current data date for the selected data set. This is displayed in the heading of the plot.
 	observe({
     print("dat_startfilter")
 		
@@ -311,7 +311,7 @@ shinyServer(function(input, output, session) {
   	dat_selection <- reactiveVal(data.frame())
   	max_day_since_start <- reactiveVal(NA)
   	observe({
-  	  print("DAT_SELCTION_STATE")
+  	  print("DAT_SELECTION_STATE")
   	  if(input$datasource == 'CSSE_State'){
     	  if (!is.null(input$state_selection)) {
     	    print(input$state_selection)
@@ -328,7 +328,7 @@ shinyServer(function(input, output, session) {
     	    dat_selection(data.frame())
     	  }
   	  }else{
-  	    print("DAT_SELCTION_COUNTRY")
+  	    print("DAT_SELECTION_COUNTRY")
   	    if (!is.null(input$country_selection)) {
   	      print(input$country_selection)
   	      d0 <- dat_startfilter() %>% filter(country %in% input$country_selection)
@@ -365,6 +365,11 @@ shinyServer(function(input, output, session) {
 		})
 	})
 	
+	
+	# update the estimated growth whenever:
+	# - button is pressed
+	# - the data set selection changes
+	# - the target variable changes
 	observeEvent(c(input$estimateGrowth, input$target, dat_selection()), {
 	  print("estimation BUTTON")
 		if (isolate(input$showReferenceLine == FALSE)) {
@@ -397,6 +402,7 @@ shinyServer(function(input, output, session) {
 	})
 	
 	
+	# ---------------------------------------------------------------------
 	# the plot
 	output$res <- renderUI({
 		
@@ -448,7 +454,7 @@ shinyServer(function(input, output, session) {
 		}
 				
 		return(tagList(
-		  renderPlot(p1, res=100, height=600, width="auto")
+		  renderPlot(p1, res=100, height=700, width="auto")
 		))
 	
 	})
