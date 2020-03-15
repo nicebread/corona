@@ -57,7 +57,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			  actionButton("estimateGrowth", "Fit growth rate to current country selection"),
 			  checkboxInput("showReferenceLine", "Show reference line", value=TRUE),
 			  sliderInput("percGrowth", label = "% daily growth:", min = 0, max = 100, value = 33, step = 1),
-			  sliderInput("offset", label = "Offset at start:", min = 1, max = 1000, value = 100, step = 1),
+			  sliderInput("offset", label = "Offset at start:", min = 1, max = 5000, value = 100, step = 5),
 			
 			h3("Filter:"),
 			  p("Filter countries that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 

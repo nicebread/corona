@@ -262,9 +262,9 @@ shinyServer(function(input, output, session) {
 	observeEvent(input$target, { 
 		isolate({
 			if (input$target == "cum_cases") 
-				updateSliderInput(session, "offset", min = 1, max = 1000, value = 100, step = 1)
+				updateSliderInput(session, "offset", min = 0, max = 5000, value = 100, step = 5)
 			if (input$target == "cum_cases_per_100000") 
-				updateSliderInput(session, "offset", value = 0.1, min = 0, max = 5, step = 0.05)	
+				updateSliderInput(session, "offset", value = 0.1, min = 0, max = 10, step = 0.05)	
 		})
 	})
 	
