@@ -24,3 +24,4 @@ You can also open the project on BinderHub either within an online RStudio or as
 * [Felix Schönbrodt](https://github.com/nicebread)
 * [Angelika Stefan](https://github.com/astefan1)
 * [Philipp Zumstein](https://github.com/zuphilip)
+* [Paul A. Bloom](https://github.com/pab2163)

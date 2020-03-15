@@ -41,7 +41,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		
 		column(4,
 		  h3("Data source:"),
-			  radioButtons("datasource", "", c("European Centre for Disease Prevention and Control" = "ECDC", "Johns Hopkins CSSE" = "CSSE")),
+			  radioButtons("datasource", "", c("European Centre for Disease Prevention and Control" = "ECDC", "Johns Hopkins CSSE" = "CSSE", 'Johns Hopkins CSSE - US States' = 'CSSE_State')),
 			
 		  h3("Target variable:"),
 		    radioButtons("target", "", c("Confirmed cumulative cases" = "cum_cases", "Confirmed cumulative cases per 100,000" = "cum_cases_per_100000")),
@@ -60,29 +60,37 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			  sliderInput("offset", label = "Offset at start:", min = 1, max = 5000, value = 100, step = 5),
 			
 			h3("Filter:"),
-			  p("Filter countries that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 
+			p("Filter countries/states that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 
 			  style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"),
-			  sliderInput("minCases", label = "Minimum overall cases per country:", min = 1, max = 10000, value = 100, step = 10),	
-			  sliderInput("start_cumsum", label = "Start display at the day with at least X cumulative cases:", min = 1, max = 1000, value = 100, step = 1),	
-				
-			h2("Country selection:"),
-			  actionButton("selectAllCountries", "Select all countries"),
-			  actionButton("deselectAllCountries", "Deselect all countries"),
-			  htmlOutput("country_selector")
-			
-			# ---------------------------------------------------------------------
-			# Output column
-			
-		),
-			
+			sliderInput("minCases", label = "Minimum overall cases per country/state:", min = 1, max = 10000, value = 100, step = 10),	
+			sliderInput("start_cumsum", label = "Start display at the day with at least X cumulative cases:", min = 1, max = 1000, value = 100, step = 1),	
+			# Panels for selecting states/countries appear conditionally based on the chosen data
+			conditionalPanel(
+			  condition = "input.datasource == 'CSSE_State'",
+			  h2("State selection:"),
+			  actionButton("selectAllStates", "Select all states"),
+			  actionButton("deselectAllStates", "Deselect all states"),
+			  htmlOutput("state_selector")
+
+			),
+  		conditionalPanel(
+  		  condition = "input.datasource != 'CSSE_State'",
+  			h2("Country selection:"),
+  			  actionButton("selectAllCountries", "Select all countries"),
+  			  actionButton("deselectAllCountries", "Deselect all countries"),
+  			  htmlOutput("country_selector")
+  			
+  			# ---------------------------------------------------------------------
+  			# Output column
+  		)),
 		column(8,
 			htmlOutput("res"),
 			downloadButton("DownloadFig", "Download Plot")
 		)			
 	),
-	HTML('This visualization is inspired by a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>.<br>'),
+	HTML('This visualization is inspired by a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>, created by <a href="https://twitter.com/jburnmurdoch" target="_blank">John Burn-Murdoch</a>.<br>'),
 	HTML('Data sources for Covid-19 cases : <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide"  target="_blank">European Centre for Disease Prevention and Control</a> and <a href="https://github.com/CSSEGISandData/COVID-19"  target="_blank">Johns Hopkins CSSE</a> (both are updated daily)<br>'),
 	HTML('Data sources for country population: <a href="https://data.worldbank.org/indicator/SP.POP.TOTL"  target="_blank">The World Bank data</a><br><br>'),
-	HTML('2020. Contributors: Felix Schönbrodt, <a href="https://www.nicebread.de"  target="_blank">https://www.nicebread.de</a>, Angelika Stefan, Philipp Zumstein<br>'),
+	HTML('2020. Contributors: <a href="https://www.nicebread.de" target="_blank">Felix Schönbrodt</a>, <a href="https://github.com/astefan1" target="_blank">Angelika Stefan</a>, <a href="https://github.com/zuphilip"  target="_blank">Philipp Zumstein</a>, <a href="https://github.com/pab2163" target="_blank">Paul A. Bloom</a><br>'),
 	HTML('Open source code on Github: <a href="https://github.com/nicebread/corona"  target="_blank">https://github.com/nicebread/corona</a>')
 ))
