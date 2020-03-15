@@ -8,6 +8,7 @@ library(stringr)
 library(lubridate)
 library(tidyr)
 library(magrittr)
+library(plotly)
 options(shiny.sanitize.errors = FALSE)
 
 # load country level population data: How many people live in each country?
@@ -440,7 +441,7 @@ shinyServer(function(input, output, session) {
 	
 	# ---------------------------------------------------------------------
 	# the plot
-	output$res <- renderUI({
+	innerplot <- function() {
 		
 	  print("PLOT:")
 		print(str(dat_selection()))
@@ -466,29 +467,35 @@ shinyServer(function(input, output, session) {
 	print(paste0("Using target variable ", real_target))
 		
 	# Plot countries
-	if (!'state' %in% names(dat_selection())){
+	if (!'state' %in% names(dat_selection())) {
 		p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='country')) + 
 			geom_point() + 
 			geom_line() + 
-			geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE) + scale_color_discrete(guide = FALSE) +
+			scale_color_discrete(guide = FALSE) +
 			theme_bw() + 
 			labs(
 				title = paste0("Visualization based on data from ", input$datasource, ". Data set from ", current_data_date()),
 			  subtitle = ifelse(real_target == "cum_deaths_plus_one" & input$logScale == TRUE, "Deaths increased by 1 to avoid log(0)", ""),
 			  caption = "Source: http://shinyapps.org/apps/corona/", 
 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
-	}else{ 
+		if (input$usePlotly == FALSE) {
+			p1 <- p1 + geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE)
+		}
+	} else { 
 	  # Plot US states
 	  p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='state')) + 
 	    geom_point() + 
 	    geom_line() + 
-	    geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE) + scale_color_discrete(guide = FALSE) +
+	    scale_color_discrete(guide = FALSE) +
 	    theme_bw() + 
 			labs(
 				title = paste0("Visualization based on data from CSSE US data by state. Data set from ", current_data_date()),
 			  subtitle = ifelse(real_target == "cum_deaths_plus_one" & input$logScale == TRUE, "Deaths increased by 1 to avoid log(0)", ""),
 			  caption = "Source: http://shinyapps.org/apps/corona/", 
 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
+	  if (input$usePlotly == FALSE) {
+	  	p1 <- p1 + geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE)
+	  }
 	  startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
 	}
 		if (input$logScale == TRUE) {
@@ -506,13 +513,23 @@ shinyServer(function(input, output, session) {
 		    stat_function(fun = growth, args=list(percGrowth=input$percGrowth, intercept=input$offset), color="black", linetype="dashed") +
 		    annotate(label=paste0(input$percGrowth, "% growth rate"), x=max_day_since_start(), y=growth(max_day_since_start()+1, percGrowth=input$percGrowth, intercept=input$offset), geom="text", hjust=1)
 		}
-				
-		return(tagList(
-		  renderPlot(p1, res=100, height=700, width="auto")
-		))
+		
+		return(p1)
 	
+	}
+	output$resNormal <- renderPlot(innerplot())
+	output$resInteractive <- renderPlotly(innerplot())
+	output$normalPlot <- renderUI({
+		tagList(
+			plotOutput("resNormal", height="700px")
+		)
 	})
-	
+	output$interactivePlot <- renderUI({
+		tagList(
+			plotlyOutput("resInteractive", height="700px")
+		)
+	})
+
 	output$DownloadFig <- downloadHandler(
 	  filename = "COVID19.pdf",
 	  content = function(file){
