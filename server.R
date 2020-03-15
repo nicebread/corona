@@ -183,8 +183,9 @@ CSSE_data_date <- max(dat_CSSE$date)
 growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
 
 # estimate growth curve
-#day = dat_ECDC %>% filter(country=="Germany", cum_cases > 50) %>% pull("day_in_dataset")
-#cases = dat_ECDC %>% filter(country=="Germany", cum_cases > 50) %>% pull("cum_cases_per_100000")
+# Extract some data for testing the function
+# day = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50) %>% pull("day_in_dataset")
+# cases = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50) %>% pull("cum_cases")
 
 estimate_daily_growth_rate <- function(day, cases, min_cases) {
   fit_nls <- nls(cases ~ intercept*(1+b)^day, start = c(b = 0.30, intercept = min_cases))
