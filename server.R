@@ -37,35 +37,29 @@ last_CSSE_download <- recent_CSSE_file %>% str_match(pattern="_(.*)\\.csv") %>% 
 ## https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_daily_reports
 ## ======================================================================
 	
-if (today < last_ECDC_download)	{	
-	print("Downloading recent ECDC data file from Github ...")
-	
-	# try ten days from today backwards to download the latest data file	
-	ECDC_success <- FALSE
-	for (backwards in 0:10) {
-		dataDate <- today - backwards
-		print(paste0("Try to download data file from ", dataDate))
-		
+
+print("Checking and possibly update ECDC data.")
+# try ten days from today backwards to download the latest data file	
+for (backwards in 0:10) {
+	dataDate <- today - backwards
+	if (dataDate > last_ECDC_download) {
+	  print(paste0("Try to download data file from ", dataDate))
 		tryCatch({
-			if (ECDC_success == FALSE) {
-			  download.file(paste0("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-", dataDate, ".xls"), destfile=paste0("ECDC_", dataDate, ".xls"))
-				ECDC_success <- TRUE
-				ECDC_dataDate <- dataDate
-			}
-		  
-			if (ECDC_success) break;
+		  download.file(paste0("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-", dataDate, ".xls"), destfile=paste0("ECDC_", dataDate, ".xls"))
+			ECDC_dataDate <- dataDate
+			break;
 		},
 		error=function(cond) {
 		  message(paste("ECDC URL does not seem to exist: ", cond))
-		}
-		)
+		})
+	} else {
+	  print("No updated ECDC data found")
+	  break;
 	}
-} else {
-	print("No updated ECDC file available.")
 }
-	
-if (today < last_CSSE_download)	{
-	print("Downloading recent CSSE data file from Github ...")
+
+if (today > last_CSSE_download)	{
+	print("Downloading recent CSSE data file from GitHub ...")
 	download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("CSSE_", today, ".csv"))	
 	
 	recent_CSSE_file <- list.files(pattern="CSSE") %>% tail(1)
