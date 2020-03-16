@@ -41,10 +41,38 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		
 		column(4,
 		  h3("Data source:"),
-			  radioButtons("datasource", "", c("European Centre for Disease Prevention and Control" = "ECDC", "Johns Hopkins CSSE" = "CSSE", 'Johns Hopkins CSSE - US States' = 'CSSE_State')),
+			  radioButtons("datasource", "", c(
+					"European Centre for Disease Prevention and Control" = "ECDC", 
+					"Johns Hopkins CSSE" = "CSSE", 
+					'Johns Hopkins CSSE - US States' = 'CSSE_State')
+				),
 			
 		  h3("Target variable:"),
-		    radioButtons("target", "", c("Confirmed cumulative cases" = "cum_cases", "Confirmed cumulative cases per 100,000" = "cum_cases_per_100000")),
+				radioButtons("target", "", c(
+						"Confirmed cumulative cases" = "cum_cases",
+						"Confirmed cumulative deaths" = "cum_deaths",
+						"Confirmed cumulative cases per 100,000" = "cum_cases_per_100000"),
+						selected = "cum_cases"
+					),
+				# conditionalPanel(
+				# 			  	condition = "input.datasource == 'ECDC'",  # no "recovered" in ECDC data set
+				# 			    radioButtons("target", "", c(
+				# 		"Confirmed cumulative cases" = "cum_cases",
+				# 		"Confirmed cumulative deaths" = "cum_deaths",
+				# 		"Confirmed cumulative cases per 100,000" = "cum_cases_per_100000"),
+				# 		selected = "cum_cases"
+				# 	),
+				# ),
+				# conditionalPanel(
+				# 			  	condition = "input.datasource != 'ECDC'",
+				# 			    radioButtons("target", "", c(
+				# 		"Confirmed cumulative cases" = "cum_cases",
+				# 		"Confirmed cumulative deaths" = "cum_deaths",
+				# 		"Confirmed cumulative recovered" = "cum_recovered",
+				# 		"Confirmed cumulative cases per 100,000" = "cum_cases_per_100000"),
+				# 		selected = "cum_cases"
+				# 	),
+				# ),
 		  
 		  
 		  h3("Display options:"),

@@ -26,9 +26,12 @@ state_pop = read.csv('data/state_population_estimates_2019.csv', stringsAsFactor
 
 today <- Sys.Date()
 recent_ECDC_file <- list.files(pattern="ECDC") %>% tail(1)
-recent_CSSE_file <- list.files(pattern="CSSE") %>% tail(1)
+recent_CSSE_confirmed_file <- list.files(pattern="CSSE_confirmed") %>% tail(1)
+recent_CSSE_deaths_file <- list.files(pattern="CSSE_deaths") %>% tail(1)
+recent_CSSE_recovered_file <- list.files(pattern="CSSE_recovered") %>% tail(1)
+
 last_ECDC_download <- recent_ECDC_file %>% str_match(pattern="_(.*)\\.xls") %>% extract2(2)
-last_CSSE_download <- recent_CSSE_file %>% str_match(pattern="_(.*)\\.csv") %>% extract2(2)
+last_CSSE_confirmed_download <- recent_CSSE_confirmed_file %>% str_match(pattern="_confirmed_(.*)\\.csv") %>% extract2(2)
 
 ## ======================================================================
 ## Download latest data
@@ -64,12 +67,19 @@ for (backwards in 0:10) {
 	}
 }
 
-if (today > last_CSSE_download)	{
+if (today > last_CSSE_confirmed_download)	{
 	print("Downloading recent CSSE data file from GitHub ...")
-	download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("CSSE_", today, ".csv"))	
 	
-	recent_CSSE_file <- list.files(pattern="CSSE") %>% tail(1)
-	last_CSSE_download <- today
+	download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("CSSE_confirmed_", today, ".csv"))	
+	
+	download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv", destfile=paste0("CSSE_deaths_", today, ".csv"))	
+	
+	download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv", destfile=paste0("CSSE_recovered_", today, ".csv"))	
+	
+	recent_CSSE_confirmed_file <- list.files(pattern="CSSE_confirmed") %>% tail(1)
+	recent_CSSE_deaths_file <- list.files(pattern="CSSE_deaths") %>% tail(1)
+	recent_CSSE_recovered_file <- list.files(pattern="CSSE_recovered") %>% tail(1)
+	last_CSSE_confirmed_download <- last_CSSE_deaths_download <- today
 } else {
 	print("No updated CSSE file available.")
 }
@@ -77,9 +87,13 @@ if (today > last_CSSE_download)	{
 
 # load data files
 dat0_ECDC <- import(recent_ECDC_file)
-dat0_CSSE <- import(recent_CSSE_file)
+dat0_CSSE_confirmed <- import(recent_CSSE_confirmed_file)
+dat0_CSSE_deaths <- import(recent_CSSE_deaths_file)
+dat0_CSSE_recovered <- import(recent_CSSE_recovered_file)
 
-# preprocess the data sets, make common format
+# ---------------------------------------------------------------------
+#  preprocess the data sets, make common format
+
 dat_ECDC <- dat0_ECDC %>% 
 	rename(
 		# assign shorted var names
@@ -94,6 +108,7 @@ dat_ECDC <- dat0_ECDC %>%
 	arrange(country, date) %>% 
 	mutate(
 		cum_cases = cumsum(new_cases),
+		cum_deaths = cumsum(new_deaths),
 		overall_cum_cases = max(cum_cases),
 		cum_cases_l1 = lag(cum_cases),
 		dailyGrowth = cum_cases / cum_cases_l1 - 1,
@@ -115,46 +130,26 @@ ECDC_data_date <- max(dat_ECDC$date)
 # ---------------------------------------------------------------------
 #  Preprocess CSSE data
 
-# transform to long format with state-by-state US data
-dat_CSSE_US_states <- dat0_CSSE %>%
-  dplyr::select(., state = `Province/State`, country = `Country/Region`, everything()) %>%
-  dplyr::filter(., country == 'US', !grepl(',',state), state != 'Grand Princess') %>% #filter out county-level data
-  dplyr::select(-country, -Lat, -Long) %>%
-  pivot_longer(-1, names_to="date.original", values_to="cum_cases") %>% 
-    group_by(state, date.original) %>%
-  summarise(cum_cases = sum(cum_cases)) %>%
-  ungroup() %>%
-  mutate(
-    date = mdy(date.original)
-  ) %>% 
-  group_by(state) %>% 
-  arrange(state, date) %>% 
-  mutate(
-    overall_cum_cases = max(cum_cases),
-    cum_cases_l1 = lag(cum_cases),
-    dailyGrowth = cum_cases / cum_cases_l1 - 1,
-    day_in_dataset = 1:n(),
-    # state label only at the last data point of each timeline:
-    state_label = if_else(day_in_dataset == max(day_in_dataset), as.character(state), NA_character_),
-    # keep country label as USA for all US state data
-    country = 'USA',
-    country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
-  ) %>%
-  left_join(state_pop, by = 'state') %>%
-  mutate(cum_cases_per_100000 = cum_cases / (population/100000))
 
-
-dat0_CSSE <- dat0_CSSE %>% select(-1, -3, -4)
-colnames(dat0_CSSE)[1] <- c("country")
-
+# ---------------------------------------------------------------------
+#  merge three CSSE data sets
 
 # transform to long format for country data
-dat_CSSE <- dat0_CSSE %>% 
-	pivot_longer(-1, names_to="date.original", values_to="cum_cases") %>% 
+dat_CSSE_confirmed <- dat0_CSSE_confirmed %>% select(-3, -4) %>% pivot_longer(-c(1:2), names_to="date.original", values_to="cum_cases")
+dat_CSSE_deaths <- dat0_CSSE_deaths %>% select(-3, -4) %>% pivot_longer(-c(1:2), names_to="date.original", values_to="cum_deaths")
+dat_CSSE_recovered <- dat0_CSSE_recovered %>% select(-3, -4) %>% pivot_longer(-c(1:2), names_to="date.original", values_to="cum_recovered")
+
+dat_CSSE_combined <- inner_join(dat_CSSE_confirmed, dat_CSSE_deaths) %>% inner_join(dat_CSSE_recovered)
+colnames(dat_CSSE_combined)[2] <- c("country")
+
   
-  # aggregate countries which have multiple states in the data base
-  group_by(country, date.original) %>%
-  summarise(cum_cases = sum(cum_cases)) %>%
+dat_CSSE <- dat_CSSE_combined %>%  group_by(country, date.original) %>%
+	# aggregate countries which have multiple states in the data base
+  summarise(
+		cum_cases = sum(cum_cases),
+		cum_deaths = sum(cum_deaths),
+		cum_recovered = sum(cum_recovered)
+	) %>%
   ungroup() %>%
 	mutate(
 		date = mdy(date.original)
@@ -179,6 +174,38 @@ dat_CSSE <- inner_join(dat_CSSE, pop, by="country") %>%
 CSSE_data_date <- max(dat_CSSE$date)
 
 
+# US states: transform to long format with state-by-state US data
+dat_CSSE_US_states <- dat_CSSE_combined %>%
+  dplyr::select(., state = `Province/State`, everything()) %>%
+  dplyr::filter(., country == 'US', !grepl(',',state), state != 'Grand Princess') %>% #filter out county-level data
+  dplyr::select(-country) %>%
+  #pivot_longer(-1, names_to="date.original", values_to="cum_cases") %>% 
+  #  group_by(state, date.original) %>%
+  #summarise(cum_cases = sum(cum_cases)) %>%
+  ungroup() %>%
+  mutate(
+    date = mdy(date.original)
+  ) %>% 
+  group_by(state) %>% 
+  arrange(state, date) %>% 
+  mutate(
+    overall_cum_cases = max(cum_cases),
+    cum_cases_l1 = lag(cum_cases),
+    dailyGrowth = cum_cases / cum_cases_l1 - 1,
+    day_in_dataset = 1:n(),
+    # state label only at the last data point of each timeline:
+    state_label = if_else(day_in_dataset == max(day_in_dataset), as.character(state), NA_character_),
+    # keep country label as USA for all US state data
+    country = 'USA',
+    country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
+  ) %>%
+  left_join(state_pop, by = 'state') %>%
+  mutate(cum_cases_per_100000 = cum_cases / (population/100000))
+
+
+
+
+
 # helper function for exponential reference line
 growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
 
@@ -186,6 +213,10 @@ growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/1
 # Extract some data for testing the function
 # day = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50) %>% pull("day_in_dataset")
 # cases = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50) %>% pull("cum_cases")
+# df = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50)
+
+#summary(lm(log(cases) ~ 1 + day_in_dataset, data=df))
+#summary(nls(cum_cases ~ intercept*(1+b)^day_in_dataset, start = c(b = 0.30, intercept = 50), data=df))
 
 estimate_daily_growth_rate <- function(day, cases, min_cases) {
   fit_nls <- nls(cases ~ intercept*(1+b)^day, start = c(b = 0.30, intercept = min_cases))
@@ -310,7 +341,9 @@ shinyServer(function(input, output, session) {
   	  if(input$datasource == 'CSSE_State'){
     	  if (!is.null(input$state_selection)) {
     	    print(input$state_selection)
-    	    d0 <- dat_startfilter() %>% filter(state %in% input$state_selection)
+    	    d0 <- dat_startfilter() %>% 
+						filter(state %in% input$state_selection) %>% 
+						mutate(cum_deaths_plus_one = cum_deaths + 1)
     	    
     	    if (nrow(d0) > 0) {
     	      dat_selection(d0 %>% mutate(day_since_start = 1:n()))
@@ -326,7 +359,9 @@ shinyServer(function(input, output, session) {
   	    print("DAT_SELECTION_COUNTRY")
   	    if (!is.null(input$country_selection)) {
   	      print(input$country_selection)
-  	      d0 <- dat_startfilter() %>% filter(country %in% input$country_selection)
+  	      d0 <- dat_startfilter() %>% 
+						filter(country %in% input$country_selection) %>% 
+						mutate(cum_deaths_plus_one = cum_deaths + 1)
   	      
   	      if (nrow(d0) > 0) {
   	        dat_selection(d0 %>% mutate(day_since_start = 1:n()))
@@ -353,7 +388,7 @@ shinyServer(function(input, output, session) {
 	# on target change: update sliders
 	observeEvent(input$target, { 
 		isolate({
-			if (input$target == "cum_cases") 
+			if (input$target %in% c("cum_cases", "cum_deaths", "cum_recovered"))
 				updateSliderInput(session, "offset", min = 0, max = 5000, value = 100, step = 5)
 			if (input$target == "cum_cases_per_100000") 
 				updateSliderInput(session, "offset", value = 0.1, min = 0, max = 10, step = 0.05)	
@@ -377,6 +412,12 @@ shinyServer(function(input, output, session) {
 	    tryCatch({
 				if (input$target == "cum_cases") {
 					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_cases, min_cases=input$start_cumsum)
+				}
+				if (input$target == "cum_deaths") {
+					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_deaths, min_cases=input$start_cumsum)
+				}
+				if (input$target == "cum_recovered") {
+					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_recovered, min_cases=input$start_cumsum)
 				}
 				if (input$target == "cum_cases_per_100000") {
 					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_cases_per_100000, min_cases=0.1)
@@ -408,18 +449,34 @@ shinyServer(function(input, output, session) {
 			return(list(h3("No data selected.")))
 		}
 	  
-		y_label <- paste0("Cumulative number of confirmed cases", ifelse(input$logScale == TRUE, " (log scale)", ""), ifelse(input$target == "cum_cases_per_100000", ", per 100,000", ""))
+		target_label <- switch(input$target, 
+			"cum_cases" = "confirmed cases", 
+			"cum_cases_per_100000" = "confirmed cases", 
+			"cum_deaths" = "confirmed deaths")
+		
+		y_label <- paste0("Cumulative number of ", target_label, ifelse(input$logScale == TRUE, " (log scale)", ""), ifelse(input$target == "cum_cases_per_100000", ", per 100,000", ""))
+		
+	# For log scale: deaths +1 to avoid log error
+	if (input$target == "cum_deaths" & min(dat_selection()$cum_deaths) == 0) {		
+		real_target <- "cum_deaths_plus_one"
+	} else {
+		real_target <- input$target
+	}
+	
+	print(paste0("Using target variable ", real_target))
 		
 	# Plot countries
 	if (!'state' %in% names(dat_selection())){
-		p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='country')) + 
+		p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='country')) + 
 			geom_point() + 
 			geom_line() + 
 			geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE) + scale_color_discrete(guide = FALSE) +
 			theme_bw() + 
-			xlab(paste0("Days since ", input$start_cumsum, "th case")) + 
-			ylab(y_label) +
-			ggtitle(paste0("Visualization based on data from ", input$datasource, ". Data set from ", current_data_date()))
+			labs(
+				title = paste0("Visualization based on data from ", input$datasource, ". Data set from ", current_data_date()),
+			  subtitle = ifelse(real_target == "cum_deaths_plus_one" & input$logScale == TRUE, "Deaths increased by 1 to avoid log(0)", ""),
+			  caption = "Source: http://shinyapps.org/apps/corona/", 
+			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
 	}else{ 
 	  # Plot US states
 	  p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='state')) + 
@@ -427,9 +484,11 @@ shinyServer(function(input, output, session) {
 	    geom_line() + 
 	    geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE) + scale_color_discrete(guide = FALSE) +
 	    theme_bw() + 
-	    xlab(paste0("Days since ", input$start_cumsum, "th case")) + 
-	    ylab(y_label) +
-	    ggtitle(paste0("Visualization based on data from CSSE US data by state. Data set from ", current_data_date()))
+			labs(
+				title = paste0("Visualization based on data from CSSE US data by state. Data set from ", current_data_date()),
+			  subtitle = ifelse(real_target == "cum_deaths_plus_one" & input$logScale == TRUE, "Deaths increased by 1 to avoid log(0)", ""),
+			  caption = "Source: http://shinyapps.org/apps/corona/", 
+			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
 	  startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
 	}
 		if (input$logScale == TRUE) {
