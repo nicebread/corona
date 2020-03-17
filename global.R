@@ -2,17 +2,14 @@
 ## Some helper functions
 ## ======================================================================
 
-
 removeZero <- function(x) {
 	x[x==0] <- NA
 	return(x)
 }
 
 
-
 # helper function for exponential reference line
 growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
-
 
 # estimate growth curve
 # Extract some data for testing the function

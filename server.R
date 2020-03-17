@@ -521,11 +521,11 @@ shinyServer(function(input, output, session) {
 		return(p1)
 	
 	}
-	output$resNormal <- renderPlot(innerplot(), height=700, res=100)
+	output$resNormal <- renderPlot(innerplot(), res=100)
 	output$resInteractive <- renderPlotly(innerplot())
 	output$normalPlot <- renderUI({
 		tagList(
-			plotOutput("resNormal")
+			plotOutput("resNormal", height=700)
 		)
 	})
 	output$interactivePlot <- renderUI({
