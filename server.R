@@ -547,7 +547,8 @@ shinyServer(function(input, output, session) {
 	                   percGrowth = input$percGrowth,
 	                   offset = input$offset,
 	                   max_day_since_start = max_day_since_start(),
-	                   showReferenceLine = input$showReferenceLine
+	                   showReferenceLine = input$showReferenceLine,
+	                   target = input$target
 	    )
 	    rmarkdown::render(tempReport, output_file = file,
 	                      params = params,

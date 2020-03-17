@@ -12,46 +12,97 @@ params:
   offset: NA
   max_day_since_start: NA
   showReferenceLine: NA
+  target: NA
 ---
 
 \pagenumbering{gobble}
 
 ```{r echo=FALSE, fig.width = 10.4, fig.height=7.5}
+
 growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
+  
+  
+  target_label <- switch(params$target, 
+  			"cum_cases" = "confirmed cases", 
+  			"cum_cases_per_100000" = "confirmed cases",
+  			"cum_deaths_per_100000" = "confirmed deaths", 
+  			"cum_deaths" = "confirmed deaths")
+  
+  y_label <- paste0("Cumulative number of ", target_label, 
+                    ifelse(params$logScale == TRUE, " (log scale)", ""),
+                    ifelse(grepl(params$target, "100000"), ", per 100,000", ""))		
+  		
+  # For log scale: deaths +1 to avoid log error
+  	if (params$target %in% c("cum_deaths", "cum_deaths_per_100000")) {
+  		real_target <- paste0(params$target, "_noZero")
+  	} else {
+  		real_target <- params$target
+  	}		
 
-y_label <- paste0("Cumulative number of diagnosed cases", ifelse(params$logScale == TRUE, " (log scale)", ""))
-
-if(!is.null(params$dat_selection$day_since_start)){
-  p1 <- ggplot(params$dat_selection, aes(x=day_since_start, y=cum_cases, color=country)) + 
+  if(!is.null(params$dat_selection$day_since_start)){
+  if (!'state' %in% names(params$dat_selection)) {
+  
+  # Plot countries
+		p1 <- ggplot(params$dat_selection, aes_string(x="day_since_start", y=real_target, color='country')) + 
 			geom_point() + 
 			geom_line() + 
-			scale_y_continuous(breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000)) + 
-			geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE) + scale_color_discrete(guide = FALSE) +
+			scale_color_discrete(guide = FALSE) +
 			theme_bw() + 
-			xlab(paste0("Days since ", params$start_cumsum, "th case")) + 
-			ylab(y_label) +
-			ggtitle(paste0("Visualization based on data from ", params$datasource, ". Data set from ", params$current_data_date))
-				
-if (params$logScale == TRUE) {
+			labs(
+				title = paste0("Visualization based on data from ", params$datasource, ". "),
+			  subtitle = paste0("Data set from ", params$current_data_date),
+			  caption = "Source: http://shinyapps.org/apps/corona/", 
+			  x = paste0("Days since ", params$start_cumsum, "th case"), y = y_label) +
+		  geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE)
+		
+	} else {
+	  # Plot US states
+	  p1 <- ggplot(params$dat_selection, aes_string(x="day_since_start", y=params$target, color='state')) +
+	    geom_point() +
+	    geom_line() +
+	    scale_color_discrete(guide = FALSE) +
+	    theme_bw() +
+			labs(
+				title = "Visualization based on data from CSSE US data by state.",
+			  subtitle = paste0("Data set from ", params$current_data_date),
+			  caption = "Source: http://shinyapps.org/apps/corona/",
+			  x = paste0("Days since ", params$start_cumsum, "th case"), y = y_label) +
+	    geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE)
+	}
+		
+  if (params$logScale == TRUE) {
 		  p1 <- p1 + coord_trans(y = "log10")
-		}		
+	}
+  
+  if (params$target == "cum_cases") {
+			p1 <- p1 + scale_y_continuous(breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000))
+	}
+		
+  if (params$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_deaths")) {
+			p1 <- p1 + scale_y_continuous()
+	}
 
-if (params$showReferenceLine == TRUE) {
-		  p1 <- p1 + 
-		    stat_function(fun = growth, 
-		                  args=list(percGrowth=params$percGrowth, intercept=params$offset), 
-		                  color="black", linetype="dashed") +
+	if (params$showReferenceLine == TRUE) {
+		  p1 <- p1 +
+		    stat_function(fun = growth, args=list(percGrowth=params$percGrowth, 
+		                                          intercept=params$offset), 
+		                  color="black", 
+		                  linetype="dashed") +
 		    annotate(label=paste0(params$percGrowth, "% growth rate"), 
 		             x=params$max_day_since_start, 
 		             y=growth(params$max_day_since_start+1, 
-		                      percGrowth=params$percGrowth, intercept=params$offset), 
-		             geom="text", hjust=1)
-}
+		                      percGrowth=params$percGrowth, 
+		                      intercept=params$offset), geom="text", hjust=1)
+	}
+    
 p1
-} else {
+
+  } else {
   ggplot()
 }
-		
 
+# print(paste0("Using target variable ", real_target))
+# print(summary(params$dat_selection$cum_deaths_per_100000_noZero))
 
 ```
+

@@ -110,9 +110,13 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
   			# Output column
   		)),
 		column(8,
-			h3("Display options:"),
-				checkboxInput("logScale", "Print y-axis as log scale", value=FALSE),
-				checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE),
+		       fluidRow(column(10,
+		                       h3("Display options:"),
+		                       checkboxInput("logScale", "Print y-axis as log scale", value=FALSE),
+		                       checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE)),
+		                column(2,
+		                       HTML("<br><br><br><br>"),
+		                       downloadButton("DownloadFig", "Download Plot"))),
 				
 			conditionalPanel(
 				condition = "input.usePlotly != true",
@@ -121,9 +125,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			conditionalPanel(
 				condition = "input.usePlotly == true",
 				uiOutput("interactivePlot")
-			),
-			
-			downloadButton("DownloadFig", "Download Plot")
+			)
 		)
 	),
 	HTML('This visualization is inspired by a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>, created by <a href="https://twitter.com/jburnmurdoch" target="_blank">John Burn-Murdoch</a>.<br>'),
