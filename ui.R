@@ -121,7 +121,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 				uiOutput("interactivePlot")
 			),
 			checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE),
-			downloadButton("DownloadFig", "Download Plot"),
+			downloadButton("DownloadFig", "Download Plot")
 		)
 	),
 	HTML('This visualization is inspired by a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>, created by <a href="https://twitter.com/jburnmurdoch" target="_blank">John Burn-Murdoch</a>.<br>'),
