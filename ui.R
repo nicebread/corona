@@ -112,9 +112,17 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
   			# Output column
   		)),
 		column(8,
-			htmlOutput("res"),
-			downloadButton("DownloadFig", "Download Plot")
-		)			
+			conditionalPanel(
+				condition = "input.usePlotly != true",
+				uiOutput("normalPlot")
+			),
+			conditionalPanel(
+				condition = "input.usePlotly == true",
+				uiOutput("interactivePlot")
+			),
+			checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE),
+			downloadButton("DownloadFig", "Download Plot"),
+		)
 	),
 	HTML('This visualization is inspired by a figure from the <a href="https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441">Financial Times</a>, created by <a href="https://twitter.com/jburnmurdoch" target="_blank">John Burn-Murdoch</a>.<br>'),
 	HTML('Data sources for Covid-19 cases : <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide"  target="_blank">European Centre for Disease Prevention and Control</a> and <a href="https://github.com/CSSEGISandData/COVID-19"  target="_blank">Johns Hopkins CSSE</a> (both are updated daily)<br>'),
