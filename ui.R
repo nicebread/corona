@@ -116,7 +116,12 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		                       checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE)),
 		                column(2,
 		                       HTML("<br><br><br><br>"),
-		                       downloadButton("DownloadFig", "Download Plot"))),
+										 				conditionalPanel(
+										 					condition = "input.usePlotly == false",
+		                      		downloadButton("DownloadFig", "Download Plot")
+														)
+										)
+						),
 				
 			conditionalPanel(
 				condition = "input.usePlotly != true",
