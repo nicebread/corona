@@ -123,7 +123,10 @@ dat_ECDC$country[dat_ECDC$country == "South Korea"] <- "Korea"
 dat_ECDC$country[dat_ECDC$country == "United States of America"] <- "USA"
 	
 dat_ECDC <- inner_join(dat_ECDC, pop, by="country") %>%
-  mutate(cum_cases_per_100000 = cum_cases / (population/100000))
+  mutate(
+		cum_cases_per_100000 = cum_cases / (population/100000),
+		cum_deaths_per_100000 = cum_deaths / (population/100000)
+	)
 
 ECDC_data_date <- max(dat_ECDC$date)
 
@@ -170,7 +173,10 @@ dat_CSSE$country[dat_CSSE$country == "Korea, South"] <- "Korea"
 dat_CSSE$country[dat_CSSE$country == "US"] <- "USA"
 
 dat_CSSE <- inner_join(dat_CSSE, pop, by="country") %>%
-  mutate(cum_cases_per_100000 = cum_cases / (population/100000))
+	mutate(
+		cum_cases_per_100000 = cum_cases / (population/100000),
+		cum_deaths_per_100000 = cum_deaths / (population/100000)
+	)
 
 CSSE_data_date <- max(dat_CSSE$date)
 
@@ -201,28 +207,15 @@ dat_CSSE_US_states <- dat_CSSE_combined %>%
     country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
   ) %>%
   left_join(state_pop, by = 'state') %>%
-  mutate(cum_cases_per_100000 = cum_cases / (population/100000))
+  mutate(
+		cum_cases_per_100000 = cum_cases / (population/100000),
+		cum_deaths_per_100000 = cum_deaths / (population/100000)
+	)
 
 
 
 
 
-# helper function for exponential reference line
-growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
-
-# estimate growth curve
-# Extract some data for testing the function
-# day = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50) %>% pull("day_in_dataset")
-# cases = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50) %>% pull("cum_cases")
-# df = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50)
-
-#summary(lm(log(cases) ~ 1 + day_in_dataset, data=df))
-#summary(nls(cum_cases ~ intercept*(1+b)^day_in_dataset, start = c(b = 0.30, intercept = 50), data=df))
-
-estimate_daily_growth_rate <- function(day, cases, min_cases) {
-  fit_nls <- nls(cases ~ intercept*(1+b)^day, start = c(b = 0.30, intercept = min_cases))
-  return(fit_nls)
-}
 
 shinyServer(function(input, output, session) {
   
@@ -344,7 +337,10 @@ shinyServer(function(input, output, session) {
     	    print(input$state_selection)
     	    d0 <- dat_startfilter() %>% 
 						filter(state %in% input$state_selection) %>% 
-						mutate(cum_deaths_plus_one = cum_deaths + 1)
+						mutate(
+							cum_deaths_noZero = removeZero(cum_deaths),
+							cum_deaths_per_100000_noZero = removeZero(cum_deaths_per_100000)
+						)
     	    
     	    if (nrow(d0) > 0) {
     	      dat_selection(d0 %>% mutate(day_since_start = 1:n()))
@@ -362,7 +358,10 @@ shinyServer(function(input, output, session) {
   	      print(input$country_selection)
   	      d0 <- dat_startfilter() %>% 
 						filter(country %in% input$country_selection) %>% 
-						mutate(cum_deaths_plus_one = cum_deaths + 1)
+						mutate(
+							cum_deaths_noZero = removeZero(cum_deaths),
+							cum_deaths_per_100000_noZero = removeZero(cum_deaths_per_100000)
+						)
   	      
   	      if (nrow(d0) > 0) {
   	        dat_selection(d0 %>% mutate(day_since_start = 1:n()))
@@ -391,7 +390,7 @@ shinyServer(function(input, output, session) {
 		isolate({
 			if (input$target %in% c("cum_cases", "cum_deaths", "cum_recovered"))
 				updateSliderInput(session, "offset", min = 0, max = 5000, value = 100, step = 5)
-			if (input$target == "cum_cases_per_100000") 
+			if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000"))
 				updateSliderInput(session, "offset", value = 0.1, min = 0, max = 10, step = 0.05)	
 		})
 	})
@@ -423,6 +422,9 @@ shinyServer(function(input, output, session) {
 				if (input$target == "cum_cases_per_100000") {
 					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_cases_per_100000, min_cases=0.1)
 				}
+				if (input$target == "cum_deaths_per_100000") {
+					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_deaths_per_100000, min_cases=0.1)
+				}
 	    },
 	    error=function(e) return(NULL)
 	  )
@@ -452,19 +454,21 @@ shinyServer(function(input, output, session) {
 	  
 		target_label <- switch(input$target, 
 			"cum_cases" = "confirmed cases", 
-			"cum_cases_per_100000" = "confirmed cases", 
+			"cum_cases_per_100000" = "confirmed cases",
+			"cum_deaths_per_100000" = "confirmed deaths", 
 			"cum_deaths" = "confirmed deaths")
 		
-		y_label <- paste0("Cumulative number of ", target_label, ifelse(input$logScale == TRUE, " (log scale)", ""), ifelse(input$target == "cum_cases_per_100000", ", per 100,000", ""))
+		y_label <- paste0("Cumulative number of ", target_label, ifelse(input$logScale == TRUE, " (log scale)", ""), ifelse(grepl(input$target, "100000"), ", per 100,000", ""))
 		
 	# For log scale: deaths +1 to avoid log error
-	if (input$target == "cum_deaths" & min(dat_selection()$cum_deaths) == 0) {		
-		real_target <- "cum_deaths_plus_one"
+	if (input$target %in% c("cum_deaths", "cum_deaths_per_100000")) {
+		real_target <- paste0(input$target, "_noZero")
 	} else {
 		real_target <- input$target
 	}
 	
 	print(paste0("Using target variable ", real_target))
+	print(summary(dat_selection()$cum_deaths_per_100000_noZero))
 		
 	# Plot countries
 	if (!'state' %in% names(dat_selection())) {
@@ -474,8 +478,8 @@ shinyServer(function(input, output, session) {
 			scale_color_discrete(guide = FALSE) +
 			theme_bw() + 
 			labs(
-				title = paste0("Visualization based on data from ", input$datasource, ". Data set from ", current_data_date()),
-			  subtitle = ifelse(real_target == "cum_deaths_plus_one" & input$logScale == TRUE, "Deaths increased by 1 to avoid log(0)", ""),
+				title = paste0("Visualization based on data from ", input$datasource, ". "),
+			  subtitle = paste0("Data set from ", current_data_date()),
 			  caption = "Source: http://shinyapps.org/apps/corona/", 
 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
 		if (input$usePlotly == FALSE) {
@@ -489,8 +493,8 @@ shinyServer(function(input, output, session) {
 	    scale_color_discrete(guide = FALSE) +
 	    theme_bw() + 
 			labs(
-				title = paste0("Visualization based on data from CSSE US data by state. Data set from ", current_data_date()),
-			  subtitle = ifelse(real_target == "cum_deaths_plus_one" & input$logScale == TRUE, "Deaths increased by 1 to avoid log(0)", ""),
+				title = "Visualization based on data from CSSE US data by state.",
+			  subtitle = paste0("Data set from ", current_data_date()),
 			  caption = "Source: http://shinyapps.org/apps/corona/", 
 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
 	  if (input$usePlotly == FALSE) {
@@ -504,7 +508,7 @@ shinyServer(function(input, output, session) {
 		if (input$target == "cum_cases") {
 			p1 <- p1 + scale_y_continuous(breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000))
 		}
-		if (input$target == "cum_cases_per_100000") {
+		if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_deaths")) {
 			p1 <- p1 + scale_y_continuous()
 		}
 		

@@ -51,7 +51,8 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 				radioButtons("target", "", c(
 						"Confirmed cumulative cases" = "cum_cases",
 						"Confirmed cumulative deaths" = "cum_deaths",
-						"Confirmed cumulative cases per 100,000" = "cum_cases_per_100000"),
+						"Confirmed cumulative cases per 100,000" = "cum_cases_per_100000",
+						"Confirmed cumulative deaths per 100,000" = "cum_deaths_per_100000"),
 						selected = "cum_cases"
 					),
 				# conditionalPanel(
@@ -75,9 +76,6 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 				# ),
 		  
 		  
-		  h3("Display options:"),
-			  checkboxInput("logScale", "Print y-axis as log scale", value=FALSE),
-			
 			
 			h3("Reference line:"),
 			  p("If you click on the button, both intercept and exponential growth rate are estimated from the current data in the plot. Using the two sliders, you can manually adjust the reference line.", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"
@@ -112,6 +110,10 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
   			# Output column
   		)),
 		column(8,
+			h3("Display options:"),
+				checkboxInput("logScale", "Print y-axis as log scale", value=FALSE),
+				checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE),
+				
 			conditionalPanel(
 				condition = "input.usePlotly != true",
 				uiOutput("normalPlot")
@@ -120,7 +122,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 				condition = "input.usePlotly == true",
 				uiOutput("interactivePlot")
 			),
-			checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE),
+			
 			downloadButton("DownloadFig", "Download Plot")
 		)
 	),
