@@ -112,7 +112,10 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		column(8,
 		       fluidRow(column(10,
 		                       h3("Display options:"),
-		                       checkboxInput("logScale", "Print y-axis as log scale", value=FALSE),
+														conditionalPanel(
+									 						condition = "input.usePlotly == false",
+		                       	 checkboxInput("logScale", "Print y-axis as log scale", value=FALSE)
+														),
 		                       checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE)),
 		                column(2,
 		                       HTML("<br><br><br><br>"),

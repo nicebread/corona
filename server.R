@@ -395,6 +395,11 @@ shinyServer(function(input, output, session) {
 		})
 	})
 	
+	# on plotly use: disable logScale
+	observeEvent(input$usePlotly, {
+		if (input$usePlotly == TRUE) updateCheckboxInput(session, "logScale", value=FALSE)
+	})
+	
 	
 	# update the estimated growth whenever:
 	# - button is pressed
