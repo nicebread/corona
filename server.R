@@ -1,7 +1,8 @@
 # 2020 Felix Schönbrodt, MIT license
 # This data visualization is inspired by the Financial Times: https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441
 
-
+source("helpers.R", local=TRUE)
+source("load_data.R", local=TRUE)
 
 shinyServer(function(input, output, session) {
   

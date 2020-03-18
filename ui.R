@@ -131,8 +131,8 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 									 				  	condition = "input.target == 'dailyGrowth'",
 															
 															sliderInput("smoother_span", label = "Smoother span:", min = 0.15, max = 2, value = 0.75, step = .01),	
-															checkboxInput("smoother_se", "Show smoother CI", value=TRUE),
-													  ),
+															checkboxInput("smoother_se", "Show smoother CI", value=TRUE)
+													  )
 														
 													),
 		                       

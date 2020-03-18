@@ -1,44 +1,3 @@
-library(shiny)
-library(rio)
-library(tidyverse)
-library(ggrepel)
-library(stringr)
-library(lubridate)
-library(tidyr)
-library(magrittr)
-library(plotly)
-options(shiny.sanitize.errors = FALSE)
-
-
-## ======================================================================
-## Some helper functions
-## ======================================================================
-
-removeZero <- function(x) {
-	x[x==0] <- NA
-	return(x)
-}
-
-
-# helper function for exponential reference line
-growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
-
-# estimate growth curve
-# Extract some data for testing the function
-# day = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50) %>% pull("day_in_dataset")
-# cases = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50) %>% pull("cum_cases")
-# df = dat_ECDC %>% filter(country %in% c("Germany", "Italy", "France"), cum_cases > 50)
-
-#summary(lm(log(cases) ~ 1 + day_in_dataset, data=df))
-#summary(nls(cum_cases ~ intercept*(1+b)^day_in_dataset, start = c(b = 0.30, intercept = 50), data=df))
-
-estimate_daily_growth_rate <- function(day, cases, min_cases) {
-  fit_nls <- nls(cases ~ intercept*(1+b)^day, start = c(b = 0.30, intercept = min_cases))
-  return(fit_nls)
-}
-
-
-
 ## ======================================================================
 ## Load newest data files
 ## ======================================================================
@@ -59,6 +18,8 @@ pop$population <- pop[, "2018"]
 pop <- pop %>% select(country, population) %>% arrange(country)
 pop[pop$country == "Korea, Rep.", "country"] <- "Korea"
 pop[pop$country == "United States", "country"] <- "USA"
+pop[pop$country == "Russian Federation", "country"] <- "Russia"
+pop[pop$country == "Iran, Islamic Rep.", "country"] <- "Iran"
 
 
 # load in US state population data
@@ -182,7 +143,7 @@ dat_CSSE_combined <- inner_join(dat_CSSE_confirmed, dat_CSSE_deaths) %>% inner_j
 colnames(dat_CSSE_combined)[2] <- c("country")
 
   
-dat_CSSE <- dat_CSSE_combined %>%  group_by(country, date.original) %>%
+dat_CSSE0 <- dat_CSSE_combined %>%  group_by(country, date.original) %>%
 	# aggregate countries which have multiple states in the data base
   summarise(
 		cum_cases = sum(cum_cases),
@@ -204,10 +165,10 @@ dat_CSSE <- dat_CSSE_combined %>%  group_by(country, date.original) %>%
 		country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
 	)
 	
-dat_CSSE$country[dat_CSSE$country == "Korea, South"] <- "Korea"
-dat_CSSE$country[dat_CSSE$country == "US"] <- "USA"
+dat_CSSE0$country[dat_CSSE0$country == "Korea, South"] <- "Korea"
+dat_CSSE0$country[dat_CSSE0$country == "US"] <- "USA"
 
-dat_CSSE <- inner_join(dat_CSSE, pop, by="country") %>%
+dat_CSSE <- inner_join(dat_CSSE0, pop, by="country") %>%
 	mutate(
 		cum_cases_per_100000 = cum_cases / (population/100000),
 		cum_deaths_per_100000 = cum_deaths / (population/100000)
