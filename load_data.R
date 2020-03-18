@@ -114,6 +114,7 @@ dat_ECDC <- dat0_ECDC %>%
 		country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
 	)
 	
+dat_ECDC$dailyGrowth[is.nan(dat_ECDC$dailyGrowth) | is.infinite(dat_ECDC$dailyGrowth)] <- NA
 
 dat_ECDC$country[dat_ECDC$country == "South Korea"] <- "Korea"
 dat_ECDC$country[dat_ECDC$country == "United States of America"] <- "USA"
@@ -165,6 +166,8 @@ dat_CSSE0 <- dat_CSSE_combined %>%  group_by(country, date.original) %>%
 		country_label = if_else(day_in_dataset == max(day_in_dataset), as.character(country), NA_character_)
 	)
 	
+dat_CSSE0$dailyGrowth[is.nan(dat_CSSE0$dailyGrowth) | is.infinite(dat_CSSE0$dailyGrowth)] <- NA
+	
 dat_CSSE0$country[dat_CSSE0$country == "Korea, South"] <- "Korea"
 dat_CSSE0$country[dat_CSSE0$country == "US"] <- "USA"
 
@@ -207,3 +210,5 @@ dat_CSSE_US_states <- dat_CSSE_combined %>%
 		cum_cases_per_100000 = cum_cases / (population/100000),
 		cum_deaths_per_100000 = cum_deaths / (population/100000)
 	)
+	
+dat_CSSE_US_states$dailyGrowth[is.nan(dat_CSSE_US_states$dailyGrowth) | is.infinite(dat_CSSE_US_states$dailyGrowth)] <- NA

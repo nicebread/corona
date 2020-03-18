@@ -86,6 +86,7 @@ shinyServer(function(input, output, session) {
 	})
 	
 	output$state_selector <- renderUI({
+
 	  print(paste0("SELECTOR; startupflag_state = ", startupflag_state))
 	  available_states <- unique(dat_startfilter()$state)
 
@@ -118,7 +119,7 @@ shinyServer(function(input, output, session) {
   	dat_selection <- reactiveVal(data.frame())
   	max_day_since_start <- reactiveVal(NA)
   	observe({
-  	  print("DAT_SELECTION_STATE")
+  	  print("DAT_SELECTION_US_STATES")
   	  if(input$datasource == 'CSSE_State'){
     	  if (!is.null(input$state_selection)) {
     	    print(input$state_selection)
@@ -268,8 +269,21 @@ shinyServer(function(input, output, session) {
 	print(summary(dat_selection()$cum_deaths_per_100000_noZero))
 		
 	# Plot countries
-	if (!'state' %in% names(dat_selection())) {
-		p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='country'))
+	#if (!'state' %in% names(dat_selection())) {
+
+		if ('state' %in% names(dat_selection())) {
+			p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='state'))
+			if (input$usePlotly == FALSE) {
+		  	p1 <- p1 + geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE)
+		  }
+			startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
+		} else {
+			p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='country'))			
+			if (input$usePlotly == FALSE) {
+				p1 <- p1 + geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE)
+			}
+		}
+		
 		
 		if (input$target == "dailyGrowth") {
 			p1 <- p1 + geom_smooth(span=input$smoother_span, se=input$smoother_se)
@@ -286,28 +300,25 @@ shinyServer(function(input, output, session) {
 			  subtitle = paste0("Data set from ", current_data_date()),
 			  caption = "Source: http://shinyapps.org/apps/corona/", 
 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
-				
-		if (input$usePlotly == FALSE) {
-			p1 <- p1 + geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE)
-		}
+
 		
-	} else { 
-	  # Plot US states
-	  p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='state')) + 
-	    geom_point() + 
-	    geom_line() + 
-	    scale_color_discrete(guide = FALSE) +
-	    theme_bw() + 
-			labs(
-				title = "Visualization based on data from CSSE US data by state.",
-			  subtitle = paste0("Data set from ", current_data_date()),
-			  caption = "Source: http://shinyapps.org/apps/corona/", 
-			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
-	  if (input$usePlotly == FALSE) {
-	  	p1 <- p1 + geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE)
-	  }
-	  startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
-	}
+		#}  else {
+# 	  # Plot US states
+# 	  p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='state')) +
+# 	    geom_point() +
+# 	    geom_line() +
+# 	    scale_color_discrete(guide = FALSE) +
+# 	    theme_bw() +
+# 			labs(
+# 				title = "Visualization based on data from CSSE US data by state.",
+# 			  subtitle = paste0("Data set from ", current_data_date()),
+# 			  caption = "Source: http://shinyapps.org/apps/corona/",
+# 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
+# 	  if (input$usePlotly == FALSE) {
+# 	  	p1 <- p1 + geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE)
+# 	  }
+# 	  startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
+# 	}
 		if (input$logScale == TRUE) {
 		  p1 <- p1 + coord_trans(y = "log10")
 		}
