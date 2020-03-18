@@ -32,6 +32,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 
 	h2(HTML("Visualization of Covid-19 confirmed cases")),
 	HTML('<div class="alert alert-warning alert-dismissible" role="warning"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>Please report any bugs as issues at <a href="https://github.com/nicebread/corona">Github</a>, or contribute with pull requests!</div>'),
+	HTML('<div class="alert alert-info alert-dismissible" role="info"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>Disclaimer: This simulation is for research and educational purposes only and is not intended to be a tool for decision-making. There are many uncertainties and debates about the details of COVID-19 infection and case numbers.</div>'),
 
 	br(),
 
@@ -86,6 +87,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 				  ),
 				  actionButton("estimateGrowth", "Fit growth rate to current country selection"),
 				  checkboxInput("showReferenceLine", "Show reference line", value=TRUE),
+					sliderInput("estRange", label = "Estimate growth rate between these 'days since X cumulative cases' only:", min = 1, max = 100, value = c(1, 100), step = 1),	
 				  sliderInput("percGrowth", label = "% daily growth:", min = 0, max = 100, value = 33, step = 1),
 				  sliderInput("offset", label = "Offset at start:", min = 1, max = 5000, value = 100, step = 5)
 			),		
@@ -94,7 +96,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			p("Filter countries/states that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 
 			  style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"),
 			sliderInput("minCases", label = "Minimum overall cases per country/state:", min = 1, max = 10000, value = 100, step = 10),	
-			sliderInput("start_cumsum", label = "Start display at the day with at least X cumulative cases:", min = 1, max = 1000, value = 100, step = 1),	
+			sliderInput("start_cumsum", label = "Start display at the day with at least X cumulative cases:", min = 1, max = 1000, value = 100, step = 5),	
 			# Panels for selecting states/countries appear conditionally based on the chosen data
 			conditionalPanel(
 			  condition = "input.datasource == 'CSSE_State'",
@@ -131,7 +133,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 									 				  	condition = "input.target == 'dailyGrowth'",
 															
 															sliderInput("smoother_span", label = "Smoother span:", min = 0.15, max = 2, value = 0.75, step = .01),	
-															checkboxInput("smoother_se", "Show smoother CI", value=TRUE)
+															checkboxInput("smoother_se", "Show smoother CI", value=FALSE)
 													  )
 														
 													),
@@ -161,3 +163,9 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 	HTML('2020. Contributors: <a href="https://www.nicebread.de" target="_blank">Felix Schönbrodt</a>, <a href="https://github.com/astefan1" target="_blank">Angelika Stefan</a>, <a href="https://github.com/zuphilip"  target="_blank">Philipp Zumstein</a>, <a href="https://github.com/pab2163" target="_blank">Paul A. Bloom</a><br>'),
 	HTML('Open source code on Github: <a href="https://github.com/nicebread/corona"  target="_blank">https://github.com/nicebread/corona</a>')
 ))
+
+
+# Other apps:
+
+# https://alhill.shinyapps.io/COVID19seir/?fbclid=IwAR2aXJT79M2AmZxMdy8jsiEuSC4i7ijU8Av6oB4dmlZIeJ2VQgL7Tt3QGxA
+# https://gorkang.shinyapps.io/2020-corona/

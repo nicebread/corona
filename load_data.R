@@ -2,6 +2,8 @@
 ## Load newest data files
 ## ======================================================================
 
+source("helpers.R")
+
 ## ======================================================================
 ## Data sources:
 ## European Centre for Disease Prevention and Control
@@ -20,7 +22,7 @@ pop[pop$country == "Korea, Rep.", "country"] <- "Korea"
 pop[pop$country == "United States", "country"] <- "USA"
 pop[pop$country == "Russian Federation", "country"] <- "Russia"
 pop[pop$country == "Iran, Islamic Rep.", "country"] <- "Iran"
-
+print(sort(unique(pop$country)))
 
 # load in US state population data
 # State population data from 2019 US Census: https://www.census.gov/www/datasets/time-series/demo/popest/2010s-state-total.html
