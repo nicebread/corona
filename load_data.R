@@ -16,7 +16,7 @@ pop <- import("data/population_data/API_SP.POP.TOTL_DS2_en_csv_v2_821007.csv", h
 pop$country <- pop[, 1]
 pop$population <- pop[, "2018"]
 pop <- pop %>% select(country, population) %>% arrange(country)
-pop[pop$country == "Korea, Rep.", "country"] <- "Korea"
+pop[pop$country == "Korea, Rep.", "country"] <- "South Korea"
 pop[pop$country == "United States", "country"] <- "USA"
 pop[pop$country == "Russian Federation", "country"] <- "Russia"
 pop[pop$country == "Iran, Islamic Rep.", "country"] <- "Iran"
@@ -116,8 +116,9 @@ dat_ECDC <- dat0_ECDC %>%
 	
 dat_ECDC$dailyGrowth[is.nan(dat_ECDC$dailyGrowth) | is.infinite(dat_ECDC$dailyGrowth)] <- NA
 
-dat_ECDC$country[dat_ECDC$country == "South Korea"] <- "Korea"
-dat_ECDC$country[dat_ECDC$country == "United States of America"] <- "USA"
+dat_ECDC$country[dat_ECDC$country == "South_Korea"] <- "South Korea"
+dat_ECDC$country[dat_ECDC$country == "United_States_of_America"] <- "USA"
+dat_ECDC$country[dat_ECDC$country == "United_Kingdom"] <- "United Kingdom"
 	
 dat_ECDC <- inner_join(dat_ECDC, pop, by="country") %>%
   mutate(
@@ -168,7 +169,7 @@ dat_CSSE0 <- dat_CSSE_combined %>%  group_by(country, date.original) %>%
 	
 dat_CSSE0$dailyGrowth[is.nan(dat_CSSE0$dailyGrowth) | is.infinite(dat_CSSE0$dailyGrowth)] <- NA
 	
-dat_CSSE0$country[dat_CSSE0$country == "Korea, South"] <- "Korea"
+dat_CSSE0$country[dat_CSSE0$country == "Korea, South"] <- "South Korea"
 dat_CSSE0$country[dat_CSSE0$country == "US"] <- "USA"
 
 dat_CSSE <- inner_join(dat_CSSE0, pop, by="country") %>%

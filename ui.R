@@ -161,3 +161,6 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 	HTML('2020. Contributors: <a href="https://www.nicebread.de" target="_blank">Felix Schönbrodt</a>, <a href="https://github.com/astefan1" target="_blank">Angelika Stefan</a>, <a href="https://github.com/zuphilip"  target="_blank">Philipp Zumstein</a>, <a href="https://github.com/pab2163" target="_blank">Paul A. Bloom</a><br>'),
 	HTML('Open source code on Github: <a href="https://github.com/nicebread/corona"  target="_blank">https://github.com/nicebread/corona</a>')
 ))
+
+
+# https://covid19-dash.github.io/
