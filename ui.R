@@ -52,7 +52,8 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 						"Confirmed cumulative cases" = "cum_cases",
 						"Confirmed cumulative deaths" = "cum_deaths",
 						"Confirmed cumulative cases per 100,000" = "cum_cases_per_100000",
-						"Confirmed cumulative deaths per 100,000" = "cum_deaths_per_100000"),
+						"Confirmed cumulative deaths per 100,000" = "cum_deaths_per_100000",
+						"Daily growth of confirmed cases" = "dailyGrowth"),
 						selected = "cum_cases"
 					),
 				# conditionalPanel(
@@ -77,13 +78,17 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		  
 		  
 			
-			h3("Reference line:"),
-			  p("If you click on the button, both intercept and exponential growth rate are estimated from the current data in the plot. Using the two sliders, you can manually adjust the reference line.", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"
-			  ),
-			  actionButton("estimateGrowth", "Fit growth rate to current country selection"),
-			  checkboxInput("showReferenceLine", "Show reference line", value=TRUE),
-			  sliderInput("percGrowth", label = "% daily growth:", min = 0, max = 100, value = 33, step = 1),
-			  sliderInput("offset", label = "Offset at start:", min = 1, max = 5000, value = 100, step = 5),
+				conditionalPanel(   # do not show reference line for daily growth plot
+				  condition = "input.target != 'dailyGrowth'",
+			
+					h3("Reference line:"),
+				  p("If you click on the button, both intercept and exponential growth rate are estimated from the current data in the plot. Using the two sliders, you can manually adjust the reference line.", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"
+				  ),
+				  actionButton("estimateGrowth", "Fit growth rate to current country selection"),
+				  checkboxInput("showReferenceLine", "Show reference line", value=TRUE),
+				  sliderInput("percGrowth", label = "% daily growth:", min = 0, max = 100, value = 33, step = 1),
+				  sliderInput("offset", label = "Offset at start:", min = 1, max = 5000, value = 100, step = 5)
+			),		
 			
 			h3("Filter:"),
 			p("Filter countries/states that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 
@@ -113,10 +118,24 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		       fluidRow(column(10,
 		                       h3("Display options:"),
 														conditionalPanel(
-									 						condition = "input.usePlotly == false",
-		                       	 checkboxInput("logScale", "Print y-axis as log scale", value=FALSE)
-														),
-		                       checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE)),
+									 				  	condition = "input.target != 'dailyGrowth'",
+															
+															checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE),
+
+															conditionalPanel(
+										 						condition = "input.usePlotly == false",
+			                       	 	checkboxInput("logScale", "Print y-axis as log scale", value=FALSE)
+															)
+													  ),
+														conditionalPanel(
+									 				  	condition = "input.target == 'dailyGrowth'",
+															
+															sliderInput("smoother_span", label = "Smoother span:", min = 0.15, max = 2, value = 0.75, step = .01),	
+															checkboxInput("smoother_se", "Show smoother CI", value=TRUE),
+													  ),
+														
+													),
+		                       
 		                column(2,
 		                       HTML("<br><br><br><br>"),
 										 				conditionalPanel(

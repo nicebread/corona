@@ -3,11 +3,6 @@
 
 
 
-
-
-
-
-
 shinyServer(function(input, output, session) {
   
   # Startup flags to indicate whether session has just started up (in which case use defaults) for both state/country
@@ -183,7 +178,10 @@ shinyServer(function(input, output, session) {
 				updateSliderInput(session, "offset", min = 0, max = 5000, value = 100, step = 5)
 			if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000"))
 				updateSliderInput(session, "offset", value = 0.1, min = 0, max = 10, step = 0.05)	
-		})
+			if (input$target == "dailyGrowth")
+				updateCheckboxInput(session, "showReferenceLine", value = FALSE)
+				updateCheckboxInput(session, "logScale", value=FALSE)
+		})		
 	})
 	
 	# on plotly use: disable logScale
@@ -248,13 +246,15 @@ shinyServer(function(input, output, session) {
 			return(list(h3("No data selected.")))
 		}
 	  
-		target_label <- switch(input$target, 
-			"cum_cases" = "confirmed cases", 
-			"cum_cases_per_100000" = "confirmed cases",
-			"cum_deaths_per_100000" = "confirmed deaths", 
-			"cum_deaths" = "confirmed deaths")
+		y_label_0 <- switch(input$target, 
+			"cum_cases" = "Cumulative number of confirmed cases", 
+			"cum_cases_per_100000" = "Cumulative number of confirmed cases, per 100,000",
+			"cum_deaths_per_100000" = "Cumulative number of confirmed deaths, per 100,000", 
+			"cum_deaths" = "Cumulative number of confirmed deaths",
+			"dailyGrowth" = "Daily growth of confirmed cases in %",
+		)
 		
-		y_label <- paste0("Cumulative number of ", target_label, ifelse(input$logScale == TRUE, " (log scale)", ""), ifelse(grepl(input$target, "100000"), ", per 100,000", ""))
+		y_label <- paste0(y_label_0, ifelse(input$logScale == TRUE, " (log scale)", ""))
 		
 	# For log scale: deaths +1 to avoid log error
 	if (input$target %in% c("cum_deaths", "cum_deaths_per_100000")) {
@@ -268,19 +268,28 @@ shinyServer(function(input, output, session) {
 		
 	# Plot countries
 	if (!'state' %in% names(dat_selection())) {
-		p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='country')) + 
-			geom_point() + 
-			geom_line() + 
-			scale_color_discrete(guide = FALSE) +
+		p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='country'))
+		
+		if (input$target == "dailyGrowth") {
+			p1 <- p1 + geom_smooth(span=input$smoother_span, se=input$smoother_se)
+		} else {
+			p1 <- p1 + 
+				geom_point() + 
+				geom_line()
+		}
+		
+		p1 <- p1 +	scale_color_discrete(guide = FALSE) +
 			theme_bw() + 
 			labs(
 				title = paste0("Visualization based on data from ", input$datasource, ". "),
 			  subtitle = paste0("Data set from ", current_data_date()),
 			  caption = "Source: http://shinyapps.org/apps/corona/", 
 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
+				
 		if (input$usePlotly == FALSE) {
 			p1 <- p1 + geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE)
 		}
+		
 	} else { 
 	  # Plot US states
 	  p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='state')) + 
@@ -306,6 +315,9 @@ shinyServer(function(input, output, session) {
 		}
 		if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_deaths")) {
 			p1 <- p1 + scale_y_continuous()
+		}
+		if (input$target == "dailyGrowth") {
+			p1 <- p1 + scale_y_continuous(labels = scales::percent_format(accuracy = 1))
 		}
 		
 		if (input$showReferenceLine == TRUE) {
