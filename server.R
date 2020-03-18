@@ -253,7 +253,7 @@ shinyServer(function(input, output, session) {
 			"cum_cases_per_100000" = "Cumulative number of confirmed cases, per 100,000",
 			"cum_deaths_per_100000" = "Cumulative number of confirmed deaths, per 100,000", 
 			"cum_deaths" = "Cumulative number of confirmed deaths",
-			"dailyGrowth" = "Daily growth of confirmed cases in %",
+			"dailyGrowth" = "Daily growth of confirmed cases in %"
 		)
 		
 		y_label <- paste0(y_label_0, ifelse(input$logScale == TRUE, " (log scale)", ""))
@@ -368,7 +368,9 @@ shinyServer(function(input, output, session) {
 	                   offset = input$offset,
 	                   max_day_since_start = max_day_since_start(),
 	                   showReferenceLine = input$showReferenceLine,
-	                   target = input$target
+	                   target = input$target,
+	                   smoother_span = input$smoother_span,
+	                   smoother_se = input$smoother_se
 	    )
 	    rmarkdown::render(tempReport, output_file = file,
 	                      params = params,
