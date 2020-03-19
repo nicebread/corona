@@ -196,7 +196,7 @@ shinyServer(function(input, output, session) {
 	# - button is pressed
 	# - the data set selection changes
 	# - the target variable changes
-	observeEvent(c(input$estimateGrowth, input$target, dat_selection()), {
+	observeEvent(c(input$estimateGrowth, input$target, dat_selection(), input$estRange, input$showReferenceLine), {
 	  print("estimation BUTTON")
 		if (isolate(input$showReferenceLine == FALSE)) {
 			print("Skipping estimation, no reference line shown")
@@ -205,22 +205,27 @@ shinyServer(function(input, output, session) {
 	  isolate({
 	    # decrease day_since_start by 1, so that it starts with 0, and the intercept is the actual intercept in the plot
 			fit <- NULL
+			
+			ds0 <- dat_selection()
+			print(str(ds0))
+			
+			if (nrow(ds0) == 0) return()
+			ds <- ds0[ds0$day_since_start >= input$estRange[1] & ds0$day_since_start <= input$estRange[2], ] %>% 
+				as.data.frame()
+			
+			# input <- list(estRange=c(1, 100), target="cum_cases", start_cumsum = 100)
+			# ds <- dat_CSSE %>% filter(country=="Italy", cum_cases >= 100) %>%
+			# 	mutate(day_since_start = 1:n()) %>%
+			# 	filter(day_since_start >= input$estRange[1], ds$day_since_start <= input$estRange[2]) %>%
+			# 	as.data.frame()
+			# ds$day_since_start <- 1:nrow(ds)
+			# start_min_cases = 100
+			days <- ds$day_since_start - 1
+			cases <- ds[, input$target]
+			start_min_cases <- ifelse(grepl(input$target, "100000", fixed=TRUE), 0.1, input$start_cumsum)
+			
 	    tryCatch({
-				if (input$target == "cum_cases") {
-					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_cases, min_cases=input$start_cumsum)
-				}
-				if (input$target == "cum_deaths") {
-					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_deaths, min_cases=input$start_cumsum)
-				}
-				if (input$target == "cum_recovered") {
-					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_recovered, min_cases=input$start_cumsum)
-				}
-				if (input$target == "cum_cases_per_100000") {
-					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_cases_per_100000, min_cases=0.1)
-				}
-				if (input$target == "cum_deaths_per_100000") {
-					fit <- estimate_daily_growth_rate(day=dat_selection()$day_since_start-1, cases=dat_selection()$cum_deaths_per_100000, min_cases=0.1)
-				}
+					fit <- estimate_exponential_curve(day=days, cases=cases, min_cases=start_min_cases)
 	    },
 	    error=function(e) return(NULL)
 	  )
@@ -228,7 +233,8 @@ shinyServer(function(input, output, session) {
 	  
 		if (!is.null(fit)) {
 			print(summary(fit))
-		  updateSliderInput(session, "offset", value = as.numeric(coef(fit)["intercept"]))
+			intercept <- predict(fit, newdata=data.frame(day=0))
+		  updateSliderInput(session, "offset", value = as.numeric(intercept))
 		  updateSliderInput(session, "percGrowth", value = as.numeric(coef(fit)["b"]*100))
 		} else {
 			print("no fit possible")
@@ -272,19 +278,29 @@ shinyServer(function(input, output, session) {
 	#if (!'state' %in% names(dat_selection())) {
 
 		if ('state' %in% names(dat_selection())) {
-			p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='state'))
-			if (input$usePlotly == FALSE) {
-		  	p1 <- p1 + geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE)
-		  }
+			p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='state'))			
 			startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
 		} else {
 			p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='country'))			
-			if (input$usePlotly == FALSE) {
-				p1 <- p1 + geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE)
-			}
+		}
+		
+		# if estimation range is restricted: show grey rect
+		if ((input$estRange[1]>1 | input$estRange[2]<max_day_since_start()) & input$showReferenceLine == TRUE) {
+			p1 <- p1 + 
+			annotate(geom="rect", xmin=input$estRange[1], xmax=min(input$estRange[2], max_day_since_start()), ymin=input$start_cumsum, ymax=max(dat_selection()[, input$target])*1.05, fill="azure2", alpha=.3) +
+			annotate(geom="text", x=input$estRange[1], y=max(dat_selection()[, input$target]), label="Curve estimated based on values in the shaded rectangle", hjust=0, size=3)
 		}
 		
 		
+		if (input$usePlotly == FALSE) {
+			if ('state' %in% names(dat_selection())) {
+				p1 <- p1 + geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE)
+			} else {
+				p1 <- p1 + geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE)
+			}
+	  }
+		
+				
 		if (input$target == "dailyGrowth") {
 			p1 <- p1 + geom_smooth(span=input$smoother_span, se=input$smoother_se)
 		} else {
@@ -302,6 +318,7 @@ shinyServer(function(input, output, session) {
 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
 
 		
+				# TODO: I think this can be safely deleted
 		#}  else {
 # 	  # Plot US states
 # 	  p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='state')) +
@@ -334,7 +351,8 @@ shinyServer(function(input, output, session) {
 		
 		if (input$showReferenceLine == TRUE) {
 		  p1 <- p1 + 
-		    stat_function(fun = growth, args=list(percGrowth=input$percGrowth, intercept=input$offset), color="black", linetype="dashed") +
+		    stat_function(fun = growth, args=list(percGrowth=input$percGrowth, intercept=input$offset), color="black", linetype="dashed", xlim=c(max(input$estRange[1], min(dat_selection()$day_since_start)), min(input$estRange[2], max_day_since_start()))) +
+				stat_function(fun = growth, args=list(percGrowth=input$percGrowth, intercept=input$offset), color="grey80", linetype="dotted") +
 		    annotate(label=paste0(input$percGrowth, "% growth rate"), x=max_day_since_start(), y=growth(max_day_since_start()+1, percGrowth=input$percGrowth, intercept=input$offset), geom="text", hjust=1)
 		}
 		
@@ -370,7 +388,8 @@ shinyServer(function(input, output, session) {
 	                   showReferenceLine = input$showReferenceLine,
 	                   target = input$target,
 	                   smoother_span = input$smoother_span,
-	                   smoother_se = input$smoother_se
+	                   smoother_se = input$smoother_se,
+	                   estRange = input$estRange
 	    )
 	    rmarkdown::render(tempReport, output_file = file,
 	                      params = params,

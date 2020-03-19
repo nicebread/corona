@@ -2,6 +2,8 @@
 ## Load newest data files
 ## ======================================================================
 
+source("helpers.R")
+
 ## ======================================================================
 ## Data sources:
 ## European Centre for Disease Prevention and Control
@@ -20,7 +22,7 @@ pop[pop$country == "Korea, Rep.", "country"] <- "South Korea"
 pop[pop$country == "United States", "country"] <- "USA"
 pop[pop$country == "Russian Federation", "country"] <- "Russia"
 pop[pop$country == "Iran, Islamic Rep.", "country"] <- "Iran"
-
+print(sort(unique(pop$country)))
 
 # load in US state population data
 # State population data from 2019 US Census: https://www.census.gov/www/datasets/time-series/demo/popest/2010s-state-total.html
@@ -67,16 +69,21 @@ for (backwards in 0:10) {
 if (today > last_CSSE_confirmed_download)	{
 	print("Downloading recent CSSE data file from GitHub ...")
 	
-	download.file("https://github.com/CSSEGISandwww/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("data/CSSE_data/CSSE_confirmed_", today, ".csv"))	
+	tryCatch({
+		download.file("https://github.com/CSSEGISandwww/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("data/CSSE_data/CSSE_confirmed_", today, ".csv"))	
 	
-	download.file("https://github.com/CSSEGISandwww/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv", destfile=paste0("data/CSSE_data/CSSE_deaths_", today, ".csv"))	
+		download.file("https://github.com/CSSEGISandwww/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv", destfile=paste0("data/CSSE_data/CSSE_deaths_", today, ".csv"))	
 	
-	download.file("https://github.com/CSSEGISandwww/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv", destfile=paste0("data/CSSE_data/CSSE_recovered_", today, ".csv"))	
+		download.file("https://github.com/CSSEGISandwww/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv", destfile=paste0("data/CSSE_data/CSSE_recovered_", today, ".csv"))	
 	
-	recent_CSSE_confirmed_file <- list.files(pattern="CSSE_confirmed") %>% tail(1)
-	recent_CSSE_deaths_file <- list.files(pattern="CSSE_deaths") %>% tail(1)
-	recent_CSSE_recovered_file <- list.files(pattern="CSSE_recovered") %>% tail(1)
-	last_CSSE_confirmed_download <- last_CSSE_deaths_download <- today
+		recent_CSSE_confirmed_file <- list.files(pattern="CSSE_confirmed") %>% tail(1)
+		recent_CSSE_deaths_file <- list.files(pattern="CSSE_deaths") %>% tail(1)
+		recent_CSSE_recovered_file <- list.files(pattern="CSSE_recovered") %>% tail(1)
+		last_CSSE_confirmed_download <- last_CSSE_deaths_download <- today
+	},
+	error=function(cond) {
+		  message(paste("ECDC URL does not seem to exist: ", cond))
+	})
 } else {
 	print("No updated CSSE file available.")
 }
