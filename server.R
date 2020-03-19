@@ -196,7 +196,7 @@ shinyServer(function(input, output, session) {
 	# - button is pressed
 	# - the data set selection changes
 	# - the target variable changes
-	observeEvent(c(input$estimateGrowth, input$target, dat_selection(), input$estRange), {
+	observeEvent(c(input$estimateGrowth, input$target, dat_selection(), input$estRange, input$showReferenceLine), {
 	  print("estimation BUTTON")
 		if (isolate(input$showReferenceLine == FALSE)) {
 			print("Skipping estimation, no reference line shown")
