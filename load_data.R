@@ -52,8 +52,7 @@ for (backwards in 0:10) {
 	if (dataDate > last_ECDC_download) {
 	  print(paste0("Try to download data file from ", dataDate))
 		tryCatch({
-
-		  download.file(paste0("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-", dataDate, ".xls"), destfile=paste0("data/ECDC_data/ECDC_", dataDate, ".xlsx"))
+		  download.file(paste0("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-", dataDate, ".xlsx"), destfile=paste0("data/ECDC_data/ECDC_", dataDate, ".xlsx"))
 			ECDC_dataDate <- dataDate
 			break;
 		},
@@ -70,11 +69,11 @@ if (today > last_CSSE_confirmed_download)	{
 	print("Downloading recent CSSE data file from GitHub ...")
 	
 	tryCatch({
-		download.file("https://github.com/CSSEGISandwww/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("data/CSSE_data/CSSE_confirmed_", today, ".csv"))	
+		download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("data/CSSE_data/CSSE_confirmed_", today, ".csv"))	
 	
-		download.file("https://github.com/CSSEGISandwww/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv", destfile=paste0("data/CSSE_data/CSSE_deaths_", today, ".csv"))	
+		download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv", destfile=paste0("data/CSSE_data/CSSE_deaths_", today, ".csv"))	
 	
-		download.file("https://github.com/CSSEGISandwww/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv", destfile=paste0("data/CSSE_data/CSSE_recovered_", today, ".csv"))	
+		download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv", destfile=paste0("data/CSSE_data/CSSE_recovered_", today, ".csv"))	
 	
 		recent_CSSE_confirmed_file <- list.files(pattern="CSSE_confirmed") %>% tail(1)
 		recent_CSSE_deaths_file <- list.files(pattern="CSSE_deaths") %>% tail(1)
