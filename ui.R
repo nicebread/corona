@@ -161,7 +161,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			HTML('
 			<ul>
 			<li>The numbers are confirmed cases after testing. There presumably is a huge <b>rate of undetected cases</b>. One paper published in Science magazine estimates that 86% of all infections were undocumented <a href="https://science.sciencemag.org/content/early/2020/03/13/science.abb3221.abstract">(Li et al., 2020)</a></li>
-			<li><b>Between-country comparisons of absolute numbers are not meaningful</b> as there are huge differences in the amount of testing. (Countries that test more get more confirmed cases, at least unless all cases are detected. Countries that do not test at all have no cases at all.)</li>
+			<li><b>Between-country comparisons of absolute numbers are not meaningful</b> as there are huge differences in the amount of testing. (Countries that test more get more confirmed cases, at least unless all cases are detected. Countries that do not test at all have no reported cases at all.)</li>
 			<li>Between-country <b>comparisons of deaths and death rates are also problematic</b>. For example, <a href="https://twitter.com/G_House__MD/status/1238485575591698433?s=20">Germany does not do post-mortem testing</a> for Covid-19, while Italy seems to do that [citation needed]. This might explain the huge differences in death rates between Germany, Italy, and other countries.</li>
 			<li>If testing practices do not change within a country (which is a big IF), temporal <b>within-country comparisons can be considered valid</b>.</li>
 			<ul>
@@ -176,6 +176,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			HTML('				
 				<ul>
 				<li><a href="https://www.cebm.net/global-covid-19-case-fatality-rates/">Global Covid-19 Case Fatality Rates (Jason Oke, Carl Heneghan)</a></li>
+				<li><a href="https://blog.datawrapper.de/coronaviruscharts/#considerations">17 (or so) responsible live visualizations about the coronavirus, for you to use</a> by Lisa Charlotte Rost</li>
 				</ul>
 				
 				<p>Several Twitter threads warn against specific Corona visualizations (which seem to contain errors), or against visualizing this data at all, or that only experts in epidemiology should do such visualizations:</p>
