@@ -388,7 +388,8 @@ shinyServer(function(input, output, session) {
 	                   showReferenceLine = input$showReferenceLine,
 	                   target = input$target,
 	                   smoother_span = input$smoother_span,
-	                   smoother_se = input$smoother_se
+	                   smoother_se = input$smoother_se,
+	                   estRange = input$estRange
 	    )
 	    rmarkdown::render(tempReport, output_file = file,
 	                      params = params,

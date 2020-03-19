@@ -15,6 +15,7 @@ params:
   target: NA
   smoother_span: NA
   smoother_se: NA
+  estRange: NA
   
 ---
 
@@ -58,6 +59,13 @@ growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/1
 			p1 <- ggplot(params$dat_selection, aes_string(x="day_since_start", y=real_target, color='country')) +
 			            geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE)
 		}
+  
+    # if estimation range is restricted: show grey rect
+		if ((params$estRange[1]>1 | params$estRange[2]< params$max_day_since_start) & params$showReferenceLine == TRUE) {
+			p1 <- p1 + 
+			annotate(geom="rect", xmin=params$estRange[1], xmax=min(params$estRange[2], params$max_day_since_start ), ymin=params$start_cumsum, ymax=max(params$dat_selection[, params$target])*1.05, fill="azure2", alpha=.3) +
+			annotate(geom="text", x=params$estRange[1], y=max(params$dat_selection[, params$target]), label="Curve estimated based on values in the shaded rectangle", hjust=0, size=3)
+		}
 			
 	if (params$target == "dailyGrowth") {
 			p1 <- p1 + geom_smooth(span=params$smoother_span, se=params$smoother_se)
@@ -91,8 +99,9 @@ growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/1
 		
 		if (params$showReferenceLine == TRUE) {
 		  p1 <- p1 + 
-		    stat_function(fun = growth, args=list(percGrowth=params$percGrowth, intercept=params$offset), color="black", linetype="dashed") +
-		    annotate(label=paste0(params$percGrowth, "% growth rate"), x=params$max_day_since_start, y=growth(params$max_day_since_start+1, percGrowth=params$percGrowth, intercept=params$offset), geom="text", hjust=1)
+		    stat_function(fun = growth, args=list(percGrowth=params$percGrowth, intercept=params$offset), color="black", linetype="dashed", xlim=c(max(params$estRange[1], min(params$dat_selection$day_since_start)), min(params$estRange[2], params$max_day_since_start ))) +
+				stat_function(fun = growth, args=list(percGrowth=params$percGrowth, intercept=params$offset), color="grey80", linetype="dotted") +
+		    annotate(label=paste0(params$percGrowth, "% growth rate"), x=params$max_day_since_start , y=growth(params$max_day_since_start+1, percGrowth=params$percGrowth, intercept=params$offset), geom="text", hjust=1)
 		}
     
 p1
