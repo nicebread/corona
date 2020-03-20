@@ -256,8 +256,8 @@ shinyServer(function(input, output, session) {
 	  
 		y_label_0 <- switch(input$target, 
 			"cum_cases" = "Cumulative number of confirmed cases", 
-			"cum_cases_per_100000" = "Cumulative number of confirmed cases, per 100,000",
-			"cum_deaths_per_100000" = "Cumulative number of confirmed deaths, per 100,000", 
+			"cum_cases_per_100000" = "Cumulative number of confirmed cases, per capita (adjusted)",
+			"cum_deaths_per_100000" = "Cumulative number of confirmed deaths, per capita (adjusted)", 
 			"cum_deaths" = "Cumulative number of confirmed deaths",
 			"dailyGrowth" = "Daily growth of confirmed cases in %"
 		)
@@ -308,13 +308,15 @@ shinyServer(function(input, output, session) {
 				geom_point() + 
 				geom_line()
 		}
-		
+	
 		p1 <- p1 +	scale_color_discrete(guide = FALSE) +
 			theme_bw() + 
 			labs(
 				title = paste0("Visualization based on data from ", input$datasource, ". "),
 			  subtitle = paste0("Data set from ", current_data_date()),
-			  caption = "Source: http://shinyapps.org/apps/corona/", 
+			  caption = ifelse(input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_deaths"),
+			                   "Source: http://shinyapps.org/apps/corona/ \n Adjusted cumulative cases per capita: 100,000 x (cumulative cases / population)",
+			                   "Source: http://shinyapps.org/apps/corona/"), 
 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
 
 		
