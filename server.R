@@ -177,9 +177,9 @@ shinyServer(function(input, output, session) {
 	observeEvent(input$target, { 
 		isolate({
 			if (input$target %in% c("cum_cases", "cum_deaths", "cum_recovered"))
-				updateSliderInput(session, "offset", min = 0, max = 5000, value = 100, step = 5)
+				updateSliderInput(session, "offset", min = 1, max = 5000, value = 100, step = 5)
 			if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000"))
-				updateSliderInput(session, "offset", value = 0.1, min = 0, max = 10, step = 0.05)	
+				updateSliderInput(session, "offset", value = 0.1, min = 0.025, max = 10, step = 0.025)	
 			if (input$target == "dailyGrowth")
 				updateCheckboxInput(session, "showReferenceLine", value = FALSE)
 				updateCheckboxInput(session, "logScale", value=FALSE)
