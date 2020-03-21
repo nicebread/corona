@@ -80,7 +80,9 @@ growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/1
 			labs(
 				title = paste0("Visualization based on data from ", params$datasource, ". "),
 			  subtitle = paste0("Data set from ", params$current_data_date),
-			  caption = "Source: http://shinyapps.org/apps/corona/", 
+			  caption = ifelse(params$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_deaths"),
+			                   "Source: http://shinyapps.org/apps/corona/ \n Adjusted cumulative cases per capita: 100,000 x (cumulative cases / population)",
+			                   "Source: http://shinyapps.org/apps/corona/"), 
 			  x = paste0("Days since ", params$start_cumsum, "th case"), y = y_label)
 
 		

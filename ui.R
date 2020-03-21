@@ -52,11 +52,15 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 				radioButtons("target", "", c(
 						"Confirmed cumulative cases" = "cum_cases",
 						"Confirmed cumulative deaths" = "cum_deaths",
-						"Confirmed cumulative cases per 100,000" = "cum_cases_per_100000",
-						"Confirmed cumulative deaths per 100,000" = "cum_deaths_per_100000",
+						"Confirmed cumulative cases per capita*" = "cum_cases_per_100000",
+						"Confirmed cumulative deaths per capita**" = "cum_deaths_per_100000",
 						"Daily growth of confirmed cases" = "dailyGrowth"),
 						selected = "cum_cases"
 					),
+		  p("* 100,000 x (cumulative cases / population)", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:110%"
+		    ),
+		  p("** 100,000 x (cumulative deaths / population)", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:110%"
+		  ),
 				# conditionalPanel(
 				# 			  	condition = "input.datasource == 'ECDC'",  # no "recovered" in ECDC data set
 				# 			    radioButtons("target", "", c(
