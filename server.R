@@ -399,5 +399,21 @@ shinyServer(function(input, output, session) {
 	    )
 	  }
 	)
+
+
+	## ======================================================================
+	## other UI outputs
+	## ======================================================================
+	
+	output$ui_estimationWarning <- renderUI({	
+		if (input$showReferenceLine == TRUE & length(input$country_selection) > 1) {
+			return(tagList(p(
+				'Warning: You fit the exponential curve to more than one country, this might lead to strange results.', 
+				style = "font-style: italic; font-size: 0.85em; color:red; line-height:110%"
+				  )))
+		}
+		
+	})
+
 	
 })

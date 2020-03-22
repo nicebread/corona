@@ -49,13 +49,13 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 				),
 			
 		  h3("Target variable:"),
-				radioButtons("target", "", c(
+				selectInput("target", "", choices = c(
 						"Confirmed cumulative cases" = "cum_cases",
 						"Confirmed cumulative deaths" = "cum_deaths",
 						"Confirmed cumulative cases per capita*" = "cum_cases_per_100000",
 						"Confirmed cumulative deaths per capita**" = "cum_deaths_per_100000",
 						"Daily growth of confirmed cases" = "dailyGrowth"),
-						selected = "cum_cases"
+						selected = "cum_cases", multiple=FALSE, selectize=TRUE
 					),
 		  p("* 100,000 x (cumulative cases / population)", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:110%"
 		    ),
@@ -89,6 +89,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 					h3("Reference line:"),
 				  p("If you click on the button, both intercept and exponential growth rate are estimated from the current data in the plot. Using the two sliders, you can manually adjust the reference line. This is mostly useful when only a single country is selected.", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:110%"
 				  ),
+					uiOutput("ui_estimationWarning"),
 				  actionButton("estimateGrowth", "Fit growth rate to current country selection"),
 				  checkboxInput("showReferenceLine", "Show reference line", value=TRUE),
 					sliderInput("estRange", label = "Estimate growth rate between these 'days since X cumulative cases' only:", min = 1, max = 100, value = c(1, 100), step = 1),	
