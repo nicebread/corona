@@ -42,3 +42,18 @@ estimate_logistic_curve <- function(day, cases) {
 	model <- drm(cases ~ day, fct = L.3())
 	return(model)
 }
+
+
+get_nth_label <- function(x) {
+	if (x==1) {
+		return("1st")
+	} else if (x==2) {
+		return("2nd")
+	} else if (x==3) {
+		return("3rd")
+	} else if (x > 3) {
+		return(paste0(x, "th"))
+	} else {
+		return("Error")
+	}
+}

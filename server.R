@@ -317,7 +317,7 @@ shinyServer(function(input, output, session) {
 			  caption = ifelse(input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_deaths"),
 			                   "Source: http://shinyapps.org/apps/corona/ \n Adjusted cumulative cases per capita: 100,000 x (cumulative cases / population)",
 			                   "Source: http://shinyapps.org/apps/corona/"), 
-			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
+			  x = paste0("Days since ", get_nth_label(input$start_cumsum), " case"), y = y_label)
 
 		
 				# TODO: I think this can be safely deleted
