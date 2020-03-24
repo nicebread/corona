@@ -139,7 +139,15 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 															
 															sliderInput("smoother_span", label = "Smoother span:", min = 0.15, max = 2, value = 0.75, step = .01),	
 															checkboxInput("smoother_se", "Show smoother CI", value=FALSE)
-													  )
+													  ),
+														
+											  		conditionalPanel(
+											  		  condition = "input.datasource != 'CSSE_State'",
+															checkboxInput("showAnnotation", "Show annotations in plot", value=FALSE),
+															textAreaInput("annotation", "Annotations", "Country, StartDate, Label, Source
+Italy, 2020-03-10, Start national lockdown, https://en.wikipedia.org/wiki/2020_Italy_coronavirus_lockdown
+Germany, 2020-03-23, Start national contact ban, https://www.zdf.de/nachrichten/politik/coronavirus-ausgangsbeschraenkung-verschaerfung-ueberblick-100.html", width = "800px")
+														)
 														
 													),
 		                       
