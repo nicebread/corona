@@ -39,7 +39,6 @@ today <- Sys.Date()
 recent_ECDC_file <- list.files("data/ECDC_data/", pattern="ECDC") %>% tail(1)
 recent_CSSE_confirmed_file <- list.files("data/CSSE_data/", pattern="CSSE_confirmed") %>% tail(1)
 recent_CSSE_deaths_file <- list.files("data/CSSE_data/", pattern="CSSE_deaths") %>% tail(1)
-recent_CSSE_recovered_file <- list.files("data/CSSE_data/", pattern="CSSE_recovered") %>% tail(1)
 
 last_ECDC_download <- recent_ECDC_file %>% str_match(pattern="ECDC_(.*)\\.xlsx") %>% extract2(2)
 last_CSSE_confirmed_download <- recent_CSSE_confirmed_file %>% str_match(pattern="_confirmed_(.*)\\.csv") %>% extract2(2)
@@ -69,15 +68,15 @@ if (today > last_CSSE_confirmed_download)	{
 	print("Downloading recent CSSE data file from GitHub ...")
 	
 	tryCatch({
-		download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv", destfile=paste0("data/CSSE_data/CSSE_confirmed_", today, ".csv"))	
+		download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv", destfile=paste0("data/CSSE_data/CSSE_confirmed_", today, ".csv"))	
 	
-		download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Deaths.csv", destfile=paste0("data/CSSE_data/CSSE_deaths_", today, ".csv"))	
+		download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv", destfile=paste0("data/CSSE_data/CSSE_deaths_", today, ".csv"))	
 	
-		download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv", destfile=paste0("data/CSSE_data/CSSE_recovered_", today, ".csv"))	
+		#download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Recovered.csv", destfile=paste0("data/CSSE_data/CSSE_recovered_", today, ".csv"))	
 	
 		recent_CSSE_confirmed_file <- list.files(pattern="CSSE_confirmed") %>% tail(1)
 		recent_CSSE_deaths_file <- list.files(pattern="CSSE_deaths") %>% tail(1)
-		recent_CSSE_recovered_file <- list.files(pattern="CSSE_recovered") %>% tail(1)
+		#recent_CSSE_recovered_file <- list.files(pattern="CSSE_recovered") %>% tail(1)
 		last_CSSE_confirmed_download <- last_CSSE_deaths_download <- today
 	},
 	error=function(cond) {
@@ -92,7 +91,7 @@ if (today > last_CSSE_confirmed_download)	{
 dat0_ECDC <- import(paste0("data/ECDC_data/", recent_ECDC_file))
 dat0_CSSE_confirmed <- import(paste0("data/CSSE_data/", recent_CSSE_confirmed_file))
 dat0_CSSE_deaths <- import(paste0("data/CSSE_data/", recent_CSSE_deaths_file))
-dat0_CSSE_recovered <- import(paste0("data/CSSE_data/", recent_CSSE_recovered_file))
+#dat0_CSSE_recovered <- import(paste0("data/CSSE_data/", recent_CSSE_recovered_file))
 
 # ---------------------------------------------------------------------
 #  preprocess the data sets, make common format
@@ -145,23 +144,38 @@ ECDC_data_date <- max(dat_ECDC$date)
 # transform to long format for country data
 dat_CSSE_confirmed <- dat0_CSSE_confirmed %>% select(-3, -4) %>% pivot_longer(-c(1:2), names_to="date.original", values_to="cum_cases")
 dat_CSSE_deaths <- dat0_CSSE_deaths %>% select(-3, -4) %>% pivot_longer(-c(1:2), names_to="date.original", values_to="cum_deaths")
-dat_CSSE_recovered <- dat0_CSSE_recovered %>% select(-3, -4) %>% pivot_longer(-c(1:2), names_to="date.original", values_to="cum_recovered")
+#dat_CSSE_recovered <- dat0_CSSE_recovered %>% select(-3, -4) %>% pivot_longer(-c(1:2), names_to="date.original", values_to="cum_recovered")
 
-dat_CSSE_combined <- inner_join(dat_CSSE_confirmed, dat_CSSE_deaths) %>% inner_join(dat_CSSE_recovered)
+dat_CSSE_combined <- inner_join(dat_CSSE_confirmed, dat_CSSE_deaths) #%>% inner_join(dat_CSSE_recovered)
 colnames(dat_CSSE_combined)[2] <- c("country")
 
+# This data set is a mess ...
+# Why is there a province "Recovered" in Canada?
+dat_CSSE_combined %>% pull(country) %>% unique()
+dat_CSSE_combined %>% filter(country=="US") %>% print(n=100)
+dat_CSSE_combined %>% filter(country=="Canada") %>% print(n=1000)
+dat_CSSE_combined %>% filter(country=="Germany") %>% print(n=1000)
+dat_CSSE_combined %>% filter(`Province/State`=="Recovered") %>% print(n=1000)
+# dat_CSSE_combined %>% filter(country=="US") %>% pull(`Province/State`) %>% unique()
+# dat_CSSE_combined <- dat_CSSE_combined %>%
+# 	filter(`Province/State` != "US") %>% # remove strange
+# 	filter(!grepl(",", `Province/State`))  # remove cities from US data set
+
   
-dat_CSSE0 <- dat_CSSE_combined %>%  group_by(country, date.original) %>%
-	# aggregate countries which have multiple states in the data base
-  summarise(
-		cum_cases = sum(cum_cases),
-		cum_deaths = sum(cum_deaths),
-		cum_recovered = sum(cum_recovered)
-	) %>%
-  ungroup() %>%
+dat_CSSE0 <- dat_CSSE_combined %>%  
+ filter(`Province/State`!="Recovered") %>% 
 	mutate(
 		date = mdy(date.original)
 	) %>% 
+	group_by(country, date) %>%
+	# aggregate countries which have multiple states in the data base (USA, Australia, Canada)
+  summarise(
+		cum_cases = sum(cum_cases, na.rm=TRUE),
+		cum_deaths = sum(cum_deaths, na.rm=TRUE),
+		cum_recovered = sum(cum_recovered, na.rm=TRUE)
+	) %>%
+  ungroup() %>%
+	
 	group_by(country) %>% 
 	arrange(country, date) %>% 
 	mutate(
@@ -175,6 +189,7 @@ dat_CSSE0 <- dat_CSSE_combined %>%  group_by(country, date.original) %>%
 	
 dat_CSSE0$dailyGrowth[is.nan(dat_CSSE0$dailyGrowth) | is.infinite(dat_CSSE0$dailyGrowth)] <- NA
 	
+print(unique(dat_CSSE0$country))
 dat_CSSE0$country[dat_CSSE0$country == "Korea, South"] <- "South Korea"
 dat_CSSE0$country[dat_CSSE0$country == "US"] <- "USA"
 
