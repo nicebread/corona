@@ -104,7 +104,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			h3("Filter:"),
 			p("Filter countries/states that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 
 			  style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"),
-			sliderInput("minCases", label = "Minimum overall cases per country/state:", min = 1, max = 10000, value = 100, step = 10),	
+			sliderInput("minCases", label = "Minimum overall cases per country/state:", min = 1, max = 10000, value = 1000, step = 10),	
 			sliderInput("start_cumsum", label = "Start display at the day with at least X cumulative cases:", min = 1, max = 1000, value = 100, step = 5),	
 			# Panels for selecting states/countries appear conditionally based on the chosen data
 			conditionalPanel(
@@ -143,7 +143,16 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 															
 															sliderInput("smoother_span", label = "Smoother span:", min = 0.15, max = 2, value = 0.75, step = .01),	
 															checkboxInput("smoother_se", "Show smoother CI", value=FALSE)
-													  )
+													  ),
+														
+											  		conditionalPanel(
+											  		  condition = "input.datasource != 'CSSE_State' & input.target != 'dailyGrowth'",
+															checkboxInput("showAnnotation", "Show annotations in plot", value=FALSE),
+															uiOutput("ui_annotationWarning"),
+															textAreaInput("annotation", "Annotations (provide as CSV values)", "Country, StartDate, Label, Source
+Italy, 2020-03-10, Start national lockdown, https://en.wikipedia.org/wiki/2020_Italy_coronavirus_lockdown
+Germany, 2020-03-23, Start national lockdown, https://www.zdf.de/nachrichten/politik/coronavirus-ausgangsbeschraenkung-verschaerfung-ueberblick-100.html", width = "800px")
+														)
 														
 													),
 		                       

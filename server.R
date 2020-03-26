@@ -244,6 +244,41 @@ shinyServer(function(input, output, session) {
 	})
 	
 	
+	
+	# import annotation list from textarea
+	
+	annotation_list <- reactiveVal(data.frame())	
+	observeEvent(c(input$annotation, input$showAnnotation), {
+		if (input$annotation != "" & input$showAnnotation == TRUE) {
+
+		# TODO: remove demo data	
+	# 		input$annotation <- "Country, StartDate, Label, Source
+	# Italy, 2020-03-10, Start national lockdown, https://en.wikipedia.org/wiki/2020_Italy_coronavirus_lockdown
+	# Germany, 2020-03-23, Start national contact ban, https://www.zdf.de/nachrichten/politik/coronavirus-ausgangsbeschraenkung-verschaerfung-ueberblick-100.html
+	# "
+		
+			annotation_df <- read.table(text=input$annotation, header=TRUE, sep=",", fill=TRUE, row.names=NULL, as.is=TRUE)
+			annotation_df <- sapply(annotation_df, str_squish) %>% 
+				as.data.frame(stringsAsFactors=FALSE) %>%
+				rename(country=Country, date=StartDate, label=Label) %>% 
+				mutate(
+					date=as.Date(date, format="%Y-%m-%d")
+				)
+				
+			print("ANNOTATION-LIST:")
+			print(annotation_df)
+			annotation_list(annotation_df)	
+		} else {
+			return(data.frame())
+		}	
+	})
+
+			
+			
+			
+			
+	
+	
 	# ---------------------------------------------------------------------
 	# the plot
 	innerplot <- function() {
@@ -265,8 +300,8 @@ shinyServer(function(input, output, session) {
 	  
 		y_label_0 <- switch(input$target, 
 			"cum_cases" = "Cumulative number of confirmed cases", 
-			"cum_cases_per_100000" = "Cumulative number of confirmed cases, per capita (adjusted)",
-			"cum_deaths_per_100000" = "Cumulative number of confirmed deaths, per capita (adjusted)", 
+			"cum_cases_per_100000" = "Cumulative number of confirmed cases, per 100,000 capita (adjusted)",
+			"cum_deaths_per_100000" = "Cumulative number of confirmed deaths, per 100,000 capita (adjusted)", 
 			"cum_deaths" = "Cumulative number of confirmed deaths",
 			"dailyGrowth" = "Daily growth of confirmed cases in %"
 		)
@@ -274,7 +309,7 @@ shinyServer(function(input, output, session) {
 		y_label <- paste0(y_label_0, ifelse(input$logScale == TRUE, " (log scale)", ""))
 		
 	# For log scale: deaths +1 to avoid log error
-	if (input$target %in% c("cum_deaths", "cum_deaths_per_100000")) {
+	if (input$logScale == TRUE & input$target %in% c("cum_deaths", "cum_deaths_per_100000")) {
 		real_target <- paste0(input$target, "_noZero")
 	} else {
 		real_target <- input$target
@@ -346,22 +381,9 @@ shinyServer(function(input, output, session) {
 		}
 		
 	
-		if (input$annotation != "" & input$showAnnotation == TRUE) {
-		# TODO: remove demo data	
-	# 		input$annotation <- "Country, StartDate, Label, Source
-	# Italy, 2020-03-10, Start national lockdown, https://en.wikipedia.org/wiki/2020_Italy_coronavirus_lockdown
-	# Germany, 2020-03-23, Start national contact ban, https://www.zdf.de/nachrichten/politik/coronavirus-ausgangsbeschraenkung-verschaerfung-ueberblick-100.html
-	# "
-			
-			annotation_df <- read.table(text=input$annotation, header=TRUE, sep=",", fill=TRUE, row.names=NULL, as.is=TRUE)
-			annotation_df <- sapply(annotation_df, str_squish) %>% 
-				as.data.frame(stringsAsFactors=FALSE) %>% 
-				filter(Country %in% unique(ds$country)) %>% 
-				rename(country=Country, date=StartDate, label=Label) %>% 
-				mutate(
-					date=as.Date(date, format="%Y-%m-%d")
-				)
-			annotation_df2 <- inner_join(annotation_df, ds %>% select(country, date, one_of(input$target, "day_since_start")), by=c("country", "date"))
+		if (input$annotation != "" & input$showAnnotation == TRUE & input$target != "dailyGrowth") {
+	
+			annotation_df2 <- inner_join(annotation_list() %>% filter(country %in% unique(ds$country)), ds %>% select(country, date, one_of(input$target, real_target, "day_since_start")), by=c("country", "date"))
 			
 			if (nrow(annotation_df2) > 0) {
 				p1 <- p1 + geom_point(data=annotation_df2, shape=9, size=4) + geom_label_repel(data=annotation_df2, aes_string(label="label"), force = 20, nudge_x=-4, nudge_y=10, size=3)
@@ -421,9 +443,16 @@ shinyServer(function(input, output, session) {
 				'Warning: You fit the exponential curve to more than one country, this might lead to strange results.', 
 				style = "font-style: italic; font-size: 0.85em; color:red; line-height:110%"
 				  )))
-		}
-		
+		}		
 	})
 
+	output$ui_annotationWarning <- renderUI({	
+		if (input$annotation != "" & input$showAnnotation == TRUE & nrow(annotation_list())==0) {
+			return(tagList(p(
+				'Warning: There seems to be an error in your annotation CSV - no annotations displayed.', 
+				style = "font-style: italic; font-size: 0.85em; color:red; line-height:110%"
+				  )))
+		}		
+	})
 	
 })
