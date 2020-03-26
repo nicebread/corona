@@ -31,7 +31,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 	shinyjs::useShinyjs(),
 
 	h2(HTML("Visualization of Covid-19 confirmed cases")),
-	HTML('<div class="alert alert-danger alert-dismissible" role="danger"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>Please report any bugs as issues at <a href="https://github.com/nicebread/corona">Github</a>, or contribute with pull requests!<br>The CSSE data set currently changes its structure and has several reported errors; rather trust the ECDC data at the moment.</div>'),
+	HTML('<div class="alert alert-danger alert-dismissible" role="danger"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>Please report any bugs as issues at <a href="https://github.com/nicebread/corona">Github</a>, or contribute with pull requests!<br>The CSSE data set currently changes its structure and has several reported errors; the visualization of US states has been disabled until CSSE fixes the state level data sets.</div>'),
 	HTML('<div class="alert alert-info alert-dismissible" role="info"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>Disclaimer: This visualization is for research and educational purposes only and is not intended to be a tool for decision-making. There are many uncertainties and debates about the details of COVID-19 infection and case numbers. Please read the section "Putting these numbers in context" below.</div>'),
 
 	br(),
@@ -42,10 +42,14 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		
 		column(4,
 		  h3("Data source:"),
+			  # radioButtons("datasource", "", c(
+# 					"European Centre for Disease Prevention and Control" = "ECDC",
+# 					"Johns Hopkins CSSE" = "CSSE",
+# 					'Johns Hopkins CSSE - US States' = 'CSSE_State')
+# 				),
 			  radioButtons("datasource", "", c(
-					"European Centre for Disease Prevention and Control" = "ECDC", 
-					"Johns Hopkins CSSE" = "CSSE", 
-					'Johns Hopkins CSSE - US States' = 'CSSE_State')
+					"European Centre for Disease Prevention and Control" = "ECDC",
+					"Johns Hopkins CSSE" = "CSSE")
 				),
 			
 		  h3("Target variable:"),

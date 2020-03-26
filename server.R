@@ -2,7 +2,8 @@
 # This data visualization is inspired by the Financial Times: https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441
 
 source("helpers.R", local=TRUE)
-source("load_data.R", local=TRUE)
+source("download_data.R", local=TRUE)
+source("preprocess_data.R", local=TRUE)
 
 shinyServer(function(input, output, session) {
   
@@ -249,8 +250,16 @@ shinyServer(function(input, output, session) {
 		
 	  print("PLOT:")
 		print(str(dat_selection()))
+		
+		ds <- dat_selection()
+		
+		# for local testing: create an input object
+		# ds <- dat_ECDC %>% filter(country %in% c("Germany"), cum_cases > 50) %>% mutate(day_since_start = 1:n())
+		# input <- list(target="cum_cases", logScale=FALSE, estRange=c(1, 100), showReferenceLine=TRUE, start_cumsum=100, usePlotly=FALSE, datasource="CSSE", percGrowth=30, offset=100)
+		# max_day_since_start <- function() return(25)
+		# current_data_date <- function() return("2020-03-24")
 	  
-		if (nrow(dat_selection()) == 0) {
+		if (nrow(ds) == 0) {
 			return(list(h3("No data selected.")))
 		}
 	  
@@ -272,31 +281,27 @@ shinyServer(function(input, output, session) {
 	}
 	
 	print(paste0("Using target variable ", real_target))
-	print(summary(dat_selection()$cum_deaths_per_100000_noZero))
 		
-	# Plot countries
-	#if (!'state' %in% names(dat_selection())) {
-
-		if ('state' %in% names(dat_selection())) {
-			p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='state'))			
+		if ('state' %in% names(ds)) {
+			p1 <- ggplot(ds, aes_string(x="day_since_start", y=real_target, color='state'))			
 			startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
 		} else {
-			p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=real_target, color='country'))			
+			p1 <- ggplot(ds, aes_string(x="day_since_start", y=real_target, color='country'))			
 		}
 		
 		# if estimation range is restricted: show grey rect
 		if ((input$estRange[1]>1 | input$estRange[2]<max_day_since_start()) & input$showReferenceLine == TRUE) {
 			p1 <- p1 + 
-			annotate(geom="rect", xmin=input$estRange[1], xmax=min(input$estRange[2], max_day_since_start()), ymin=input$start_cumsum, ymax=max(dat_selection()[, input$target])*1.05, fill="azure2", alpha=.3) +
-			annotate(geom="text", x=input$estRange[1], y=max(dat_selection()[, input$target]), label="Curve estimated based on values in the shaded rectangle", hjust=0, size=3)
+			annotate(geom="rect", xmin=input$estRange[1], xmax=min(input$estRange[2], max_day_since_start()), ymin=input$start_cumsum, ymax=max(ds[, input$target])*1.05, fill="azure2", alpha=.3) +
+			annotate(geom="text", x=input$estRange[1], y=max(ds[, input$target]), label="Curve estimated based on values in the shaded rectangle", hjust=0, size=3)
 		}
 		
 		
 		if (input$usePlotly == FALSE) {
-			if ('state' %in% names(dat_selection())) {
-				p1 <- p1 + geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE)
+			if ('state' %in% names(ds)) {
+				p1 <- p1 + geom_label_repel(aes(label = state_label), hjust=1, vjust=1, nudge_x = 1, na.rm = TRUE)
 			} else {
-				p1 <- p1 + geom_label_repel(aes(label = country_label), nudge_x = 1, na.rm = TRUE)
+				p1 <- p1 + geom_label_repel(aes(label = country_label), hjust=1, vjust=1, nudge_x = 1, na.rm = TRUE)
 			}
 	  }
 		
@@ -320,24 +325,6 @@ shinyServer(function(input, output, session) {
 			  x = paste0("Days since ", get_nth_label(input$start_cumsum), " case"), y = y_label)
 
 		
-				# TODO: I think this can be safely deleted
-		#}  else {
-# 	  # Plot US states
-# 	  p1 <- ggplot(dat_selection(), aes_string(x="day_since_start", y=input$target, color='state')) +
-# 	    geom_point() +
-# 	    geom_line() +
-# 	    scale_color_discrete(guide = FALSE) +
-# 	    theme_bw() +
-# 			labs(
-# 				title = "Visualization based on data from CSSE US data by state.",
-# 			  subtitle = paste0("Data set from ", current_data_date()),
-# 			  caption = "Source: http://shinyapps.org/apps/corona/",
-# 			  x = paste0("Days since ", input$start_cumsum, "th case"), y = y_label)
-# 	  if (input$usePlotly == FALSE) {
-# 	  	p1 <- p1 + geom_label_repel(aes(label = state_label), nudge_x = 1, na.rm = TRUE)
-# 	  }
-# 	  startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
-# 	}
 		if (input$logScale == TRUE) {
 		  p1 <- p1 + coord_trans(y = "log10")
 		}
@@ -353,9 +340,32 @@ shinyServer(function(input, output, session) {
 		
 		if (input$showReferenceLine == TRUE) {
 		  p1 <- p1 + 
-		    stat_function(fun = growth, args=list(percGrowth=input$percGrowth, intercept=input$offset), color="black", linetype="dashed", xlim=c(max(input$estRange[1], min(dat_selection()$day_since_start)), min(input$estRange[2], max_day_since_start()))) +
+		    stat_function(fun = growth, args=list(percGrowth=input$percGrowth, intercept=input$offset), color="black", linetype="dashed", xlim=c(max(input$estRange[1], min(ds$day_since_start)), min(input$estRange[2], max_day_since_start()))) +
 				stat_function(fun = growth, args=list(percGrowth=input$percGrowth, intercept=input$offset), color="grey80", linetype="dotted") +
 		    annotate(label=paste0(input$percGrowth, "% growth rate"), x=max_day_since_start(), y=growth(max_day_since_start()+1, percGrowth=input$percGrowth, intercept=input$offset), geom="text", hjust=1)
+		}
+		
+	
+		if (input$annotation != "" & input$showAnnotation == TRUE) {
+		# TODO: remove demo data	
+	# 		input$annotation <- "Country, StartDate, Label, Source
+	# Italy, 2020-03-10, Start national lockdown, https://en.wikipedia.org/wiki/2020_Italy_coronavirus_lockdown
+	# Germany, 2020-03-23, Start national contact ban, https://www.zdf.de/nachrichten/politik/coronavirus-ausgangsbeschraenkung-verschaerfung-ueberblick-100.html
+	# "
+			
+			annotation_df <- read.table(text=input$annotation, header=TRUE, sep=",", fill=TRUE, row.names=NULL, as.is=TRUE)
+			annotation_df <- sapply(annotation_df, str_squish) %>% 
+				as.data.frame(stringsAsFactors=FALSE) %>% 
+				filter(Country %in% unique(ds$country)) %>% 
+				rename(country=Country, date=StartDate, label=Label) %>% 
+				mutate(
+					date=as.Date(date, format="%Y-%m-%d")
+				)
+			annotation_df2 <- inner_join(annotation_df, ds %>% select(country, date, one_of(input$target, "day_since_start")), by=c("country", "date"))
+			
+			if (nrow(annotation_df2) > 0) {
+				p1 <- p1 + geom_point(data=annotation_df2, shape=9, size=4) + geom_label_repel(data=annotation_df2, aes_string(label="label"), force = 20, nudge_x=-4, nudge_y=10, size=3)
+			}			
 		}
 		
 		return(p1)
