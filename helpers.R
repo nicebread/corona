@@ -23,21 +23,40 @@ removeZero <- function(x) {
 # helper function for exponential reference line
 growth <- function(x, percGrowth=33, intercept=100) {intercept*(1 + percGrowth/100)^(x-1)}
 
+# for using the fitted coefficients
+growth_m1 <- function(x, intercept, slope) {intercept*(slope^(x-1))}
+
 # estimate growth curve
-# Extract some data for testing the function
-# day = dat_ECDC %>% filter(country %in% c("Germany"), cum_cases > 50) %>% pull("day_in_dataset")
-# cases = dat_ECDC %>% filter(country %in% c("Germany"), cum_cases > 50) %>% pull("cum_cases")
-# df = dat_ECDC %>% filter(country %in% c("Germany"), cum_cases > 50)
-
-#summary(lm(log(cases) ~ 1 + day_in_dataset, data=df))
-#summary(nls(cum_cases ~ intercept*(1+b)^day_in_dataset, start = c(b = 0.30, intercept = 50), data=df))
-
-estimate_exponential_curve <- function(day, cases, min_cases) {
-  fit_nls <- nls(cases ~ intercept*(1+b)^day, start = c(b = 0.30, intercept = min_cases))
-  return(fit_nls)
+estimate_exponential_curves <- function(df, target="cum_cases", random_slopes=FALSE) {
+	df$day_since_start_m1 <- df$day_since_start - 1
+	n_countries <- length(unique(df$country))
+	
+	if (n_countries == 1) {
+		# single country
+		f <- formula(paste0("log(", target, ") ~ 1 + day_since_start_m1"))
+		fit <- lm(f, data=df)
+		intercept <- coef(fit)[1]
+		slope <- coef(fit)[2]
+		RE <- NULL
+	} else {
+		# multiple country: do mixed effects model
+		if (random_slopes == TRUE) {
+			f <- formula(paste0("log(", target, ") ~ 1 + day_since_start_m1 + (1 + day_since_start_m1 | country)"))
+		} else {
+			f <- formula(paste0("log(", target, ") ~ 1 + day_since_start_m1 + (1 | country)"))
+		}
+	
+	  fit <- lmer(f, data=df)
+		intercept <- fixef(fit)[1]
+		slope <- fixef(fit)[2]
+		RE <- coef(fit)$country
+	}
+	
+  return(list(n_countries = n_countries, fit=fit, intercept=intercept, slope=slope, RE=RE))
 }
 
 
+# not used yet:
 estimate_logistic_curve <- function(day, cases) {
 	model <- drm(cases ~ day, fct = L.3())
 	return(model)

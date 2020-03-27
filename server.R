@@ -197,9 +197,13 @@ shinyServer(function(input, output, session) {
 	# - button is pressed
 	# - the data set selection changes
 	# - the target variable changes
+	auto_fit <- reactiveVal(NULL)
 	observeEvent(c(input$estimateGrowth, input$target, dat_selection(), input$estRange, input$showReferenceLine), {
 	  print("estimation BUTTON")
-		if (isolate(input$showReferenceLine == FALSE)) {
+		
+		ds0 <- dat_selection()
+		
+		if (isolate(input$showReferenceLine == FALSE | nrow(ds0) == 0)) {
 			print("Skipping estimation, no reference line shown")
 			return()
 		}
@@ -207,40 +211,27 @@ shinyServer(function(input, output, session) {
 	    # decrease day_since_start by 1, so that it starts with 0, and the intercept is the actual intercept in the plot
 			fit <- NULL
 			
-			ds0 <- dat_selection()
-			print(str(ds0))
-			
-			if (nrow(ds0) == 0) return()
 			ds <- ds0[ds0$day_since_start >= input$estRange[1] & ds0$day_since_start <= input$estRange[2], ] %>% 
 				as.data.frame()
 			
-			# input <- list(estRange=c(1, 100), target="cum_cases", start_cumsum = 100)
-			# ds <- dat_CSSE %>% filter(country=="Italy", cum_cases >= 100) %>%
-			# 	mutate(day_since_start = 1:n()) %>%
-			# 	filter(day_since_start >= input$estRange[1], ds$day_since_start <= input$estRange[2]) %>%
-			# 	as.data.frame()
-			# ds$day_since_start <- 1:nrow(ds)
-			# start_min_cases = 100
-			days <- ds$day_since_start - 1
-			cases <- ds[, input$target]
-			start_min_cases <- ifelse(grepl(input$target, "100000", fixed=TRUE), 0.1, input$start_cumsum)
-			
 	    tryCatch({
-					fit <- estimate_exponential_curve(day=days, cases=cases, min_cases=start_min_cases)
+					fit <- estimate_exponential_curves(ds, target=input$target, random_slopes=TRUE)
 	    },
-	    error=function(e) return(NULL)
+	    error=function(e) {
+				return(NULL)
+			}
 	  )
 	  })
+		
+		print(summary(fit$fit))
 	  
 		if (!is.null(fit)) {
-			print(summary(fit))
-			intercept <- predict(fit, newdata=data.frame(day=0))
-		  updateSliderInput(session, "offset", value = as.numeric(intercept))
-		  updateSliderInput(session, "percGrowth", value = as.numeric(coef(fit)["b"]*100))
+			print(summary(fit$fit))
 		} else {
 			print("no fit possible")
 		}
 	  
+		auto_fit(fit)
 	})
 	
 	
@@ -251,12 +242,6 @@ shinyServer(function(input, output, session) {
 	observeEvent(c(input$annotation, input$showAnnotation), {
 		if (input$annotation != "" & input$showAnnotation == TRUE) {
 
-		# TODO: remove demo data	
-	# 		input$annotation <- "Country, StartDate, Label, Source
-	# Italy, 2020-03-10, Start national lockdown, https://en.wikipedia.org/wiki/2020_Italy_coronavirus_lockdown
-	# Germany, 2020-03-23, Start national contact ban, https://www.zdf.de/nachrichten/politik/coronavirus-ausgangsbeschraenkung-verschaerfung-ueberblick-100.html
-	# "
-		
 			annotation_df <- read.table(text=input$annotation, header=TRUE, sep=",", fill=TRUE, row.names=NULL, as.is=TRUE)
 			annotation_df <- sapply(annotation_df, str_squish) %>% 
 				as.data.frame(stringsAsFactors=FALSE) %>%
@@ -364,7 +349,8 @@ shinyServer(function(input, output, session) {
 		  p1 <- p1 + coord_trans(y = "log10")
 		}
 		if (input$target == "cum_cases") {
-			p1 <- p1 + scale_y_continuous(breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000))
+			#p1 <- p1 + scale_y_continuous(breaks=c(100, 200, 500, 1000, 2000, 5000, 10000, 20000))
+			p1 <- p1 + scale_y_continuous()
 		}
 		if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_deaths")) {
 			p1 <- p1 + scale_y_continuous()
@@ -373,11 +359,23 @@ shinyServer(function(input, output, session) {
 			p1 <- p1 + scale_y_continuous(labels = scales::percent_format(accuracy = 1))
 		}
 		
+		# ---------------------------------------------------------------------
+		#  show fit line(s)
 		if (input$showReferenceLine == TRUE) {
+		 
+		 	# average (fixed-effect) line
 		  p1 <- p1 + 
-		    stat_function(fun = growth, args=list(percGrowth=input$percGrowth, intercept=input$offset), color="black", linetype="dashed", xlim=c(max(input$estRange[1], min(ds$day_since_start)), min(input$estRange[2], max_day_since_start()))) +
-				stat_function(fun = growth, args=list(percGrowth=input$percGrowth, intercept=input$offset), color="grey80", linetype="dotted") +
-		    annotate(label=paste0(input$percGrowth, "% growth rate"), x=max_day_since_start(), y=growth(max_day_since_start()+1, percGrowth=input$percGrowth, intercept=input$offset), geom="text", hjust=1)
+				stat_function(fun = growth_m1, args=list(slope=exp(auto_fit()$slope), intercept=exp(auto_fit()$intercept)), color="black", size=1, linetype="dashed", xlim=c(max(input$estRange[1], min(ds$day_since_start)), min(input$estRange[2], max_day_since_start()))) +
+				stat_function(fun = growth_m1, args=list(slope=exp(auto_fit()$slope), intercept=exp(auto_fit()$intercept)), color="black", size=1, linetype="dotted") +
+		    annotate(label=paste0(round((exp(auto_fit()$slope)-1)*100), "% ", ifelse(auto_fit()$n_countries == 1, "", "average"), " growth rate"), x=max_day_since_start(), y=growth_m1(max_day_since_start()+1, slope=exp(auto_fit()$slope), intercept=exp(auto_fit()$intercept)), geom="text", hjust=1)
+				
+				
+				# if multiple countries: add individual lines
+				if (auto_fit()$n_countries > 1 & input$showRandomSlopes==TRUE) {
+					for (co in 1:nrow(auto_fit()$RE)) {
+						p1 <- p1 + stat_function(fun = growth_m1, args=list(slope=exp(auto_fit()$RE[co, 2]), intercept=exp(auto_fit()$RE[co, 1])), color="grey80", linetype="dotted")
+					}
+				}				
 		}
 		
 	

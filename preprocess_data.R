@@ -98,6 +98,7 @@ dat_CSSE_combined$country[dat_CSSE_combined$country == "Taiwan*"] <- "Taiwan"
 # Why is there a province "Recovered" in Canada?
 # dat_CSSE_combined %>% pull(country) %>% unique()
 # dat_CSSE_combined %>% pull(country) %>% table()
+# dat_CSSE_combined %>% pull(country) %>% table() %>% table()
 # dat_CSSE_combined %>% filter(country=="USA") %>% print(n=200)
 # dat_CSSE_combined %>% filter(country=="Canada") %>% print(n=1000)
 # dat_CSSE_combined %>% filter(country=="Germany") %>% print(n=1000)

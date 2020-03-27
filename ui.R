@@ -136,7 +136,10 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 															conditionalPanel(
 										 						condition = "input.usePlotly == false",
 			                       	 	checkboxInput("logScale", "Print y-axis as log scale", value=FALSE)
-															)
+															),
+															
+															checkboxInput("showRandomSlopes", "Show predictions for each country in plot (random slopes)", value=FALSE)
+															
 													  ),
 														conditionalPanel(
 									 				  	condition = "input.target == 'dailyGrowth'",
