@@ -2,7 +2,7 @@
 # This data visualization is inspired by the Financial Times: https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441
 
 source("helpers.R", local=TRUE)
-#source("download_data.R", local=TRUE)
+source("download_data.R", local=TRUE)
 source("preprocess_data.R", local=TRUE)
 
 shinyServer(function(input, output, session) {
@@ -177,42 +177,50 @@ shinyServer(function(input, output, session) {
 	# on target change: update sliders
 	observeEvent(input$target, { 
 		isolate({
-			if (input$target %in% c("cum_cases", "cum_deaths", "cum_recovered"))
+			if (input$target %in% c("cum_cases")) {
 				updateSliderInput(session, "offset", min = 1, max = 5000, value = 100, step = 5)
-			if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000"))
-				updateSliderInput(session, "offset", value = 0.1, min = 0.025, max = 10, step = 0.025)	
-			if (input$target == "dailyGrowth")
-				updateCheckboxInput(session, "showReferenceLine", value = FALSE)
-				updateCheckboxInput(session, "logScale", value=FALSE)
+				updateSliderInput(session, "refLineOffset", min = 1, max = 5000, value = 100, step = 5)					
+			} else if (input$target %in% c("cum_deaths_noZero")) {
+				updateSliderInput(session, "offset", min = 1, max = 500, value = 100, step = 1)
+				updateSliderInput(session, "refLineOffset", min = 1, max = 500, value = 100, step = 1)					
+			} else if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000_noZero")) {				
+				updateSliderInput(session, "offset", value = 0.1, min = 0.025, max = 50, step = 0.025)	
+				updateSliderInput(session, "refLineOffset", value = 0.1, min = 0.025, max = 50, step = 0.025)	
+			} else if (input$target == "dailyGrowth") {
+				#updateCheckboxInput(session, "showReferenceLine", value = FALSE)
+				updateCheckboxInput(session, "logScale", value='linear')
+			}
 		})		
 	})
 	
 	# on plotly use: disable logScale
 	observeEvent(input$usePlotly, {
-		if (input$usePlotly == TRUE) updateCheckboxInput(session, "logScale", value=FALSE)
+		if (input$usePlotly == TRUE) updateCheckboxInput(session, "logScale", value='linear')
 	})
 	
-	
+		
 	# update the estimated growth whenever:
 	# - button is pressed
 	# - the data set selection changes
 	# - the target variable changes
 	auto_fit <- reactiveVal(NULL)
-	observeEvent(c(input$estimateGrowth, input$target, dat_selection(), input$estRange, input$showReferenceLine), {
+	observeEvent(c(input$estimateGrowth, input$target, dat_selection(), input$estRange, input$fitLineType), {
 	  print("estimation BUTTON")
 		
 		ds0 <- dat_selection()
+		print(paste0(input$fitLineType, "; n=", nrow(ds0)))
 		
-		if (isolate(input$showReferenceLine == FALSE | nrow(ds0) == 0)) {
+		if (input$fitLineType %in% c("none", "manual") | nrow(ds0) == 0 |  input$target == "dailyGrowth") {
 			print("Skipping estimation, no reference line shown")
 			return()
 		}
 	  isolate({
-	    # decrease day_since_start by 1, so that it starts with 0, and the intercept is the actual intercept in the plot
 			fit <- NULL
 			
 			ds <- ds0[ds0$day_since_start >= input$estRange[1] & ds0$day_since_start <= input$estRange[2], ] %>% 
 				as.data.frame()
+				
+			print(str(ds))
 			
 	    tryCatch({
 					fit <- estimate_exponential_curves(ds, target=input$target, random_slopes=TRUE)
@@ -275,7 +283,7 @@ shinyServer(function(input, output, session) {
 		
 		# for local testing: create an input object
 		# ds <- dat_ECDC %>% filter(country %in% c("Germany"), cum_cases > 50) %>% mutate(day_since_start = 1:n())
-		# input <- list(target="cum_cases", logScale=FALSE, estRange=c(1, 100), showReferenceLine=TRUE, start_cumsum=100, usePlotly=FALSE, datasource="CSSE", percGrowth=30, offset=100)
+		# input <- list(target="cum_cases", logScale='linear', estRange=c(1, 100), fitLineType="automatic", start_cumsum=100, usePlotly=FALSE, datasource="CSSE", percGrowth=30, offset=100)
 		# max_day_since_start <- function() return(25)
 		# current_data_date <- function() return("2020-03-24")
 	  
@@ -291,29 +299,31 @@ shinyServer(function(input, output, session) {
 			"dailyGrowth" = "Daily growth of confirmed cases in %"
 		)
 		
-		y_label <- paste0(y_label_0, ifelse(input$logScale == TRUE, " (log scale)", ""))
+		y_label <- paste0(y_label_0, ifelse(input$logScale == 'log', " (log scale)", ""))
 		
-	# For log scale: deaths +1 to avoid log error
-	if (input$logScale == TRUE & input$target %in% c("cum_deaths", "cum_deaths_per_100000")) {
-		real_target <- paste0(input$target, "_noZero")
-	} else {
-		real_target <- input$target
-	}
-	
-	print(paste0("Using target variable ", real_target))
 		
 		if ('state' %in% names(ds)) {
-			p1 <- ggplot(ds, aes_string(x="day_since_start", y=real_target, color='state'))			
+			p1 <- ggplot(ds, aes_string(x="day_since_start", y=input$target, color='state'))			
 			startupflag_state <<- FALSE # Once one graph of states has been completed, turn off startup flag for states
 		} else {
-			p1 <- ggplot(ds, aes_string(x="day_since_start", y=real_target, color='country'))			
+			p1 <- ggplot(ds, aes_string(x="day_since_start", y=input$target, color='country'))			
 		}
 		
 		# if estimation range is restricted: show grey rect
-		if ((input$estRange[1]>1 | input$estRange[2]<max_day_since_start()) & input$showReferenceLine == TRUE) {
+		if ((input$estRange[1]>1 | input$estRange[2]<max_day_since_start()) & input$fitLineType != "none") {
+			
+			YMIN <- input$start_cumsum			
+			if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_cases_per_100000_noZero", "cum_deaths_per_100000_noZero")) YMIN <- 0.01
+			if (input$target %in% c("cum_deaths","cum_deaths_noZero")) YMIN <- 0.01
+				
+			YMIN <- min(ds[, input$target], na.rm=TRUE)*0.95
+			YMAX <- max(ds[, input$target], na.rm=TRUE)*1.05
+					
+			print(paste0("Showing shaded rectangle for input ", input$target, "; YMIN = ", YMIN, "; YMAX = ", YMAX))
+			
 			p1 <- p1 + 
-			annotate(geom="rect", xmin=input$estRange[1], xmax=min(input$estRange[2], max_day_since_start()), ymin=input$start_cumsum, ymax=max(ds[, input$target])*1.05, fill="azure2", alpha=.3) +
-			annotate(geom="text", x=input$estRange[1], y=max(ds[, input$target]), label="Curve estimated based on values in the shaded rectangle", hjust=0, size=3)
+			annotate(geom="rect", xmin=input$estRange[1], xmax=min(input$estRange[2], max_day_since_start()), ymin=YMIN, ymax=YMAX, fill="azure2", alpha=.3) +
+			annotate(geom="text", x=input$estRange[1], y=YMAX, label="Curve estimated based on values in the shaded rectangle", hjust=0, size=3)
 		}
 		
 		
@@ -345,7 +355,7 @@ shinyServer(function(input, output, session) {
 			  x = paste0("Days since ", get_nth_label(input$start_cumsum), " case"), y = y_label)
 
 		
-		if (input$logScale == TRUE) {
+		if (input$logScale == 'log') {
 		  p1 <- p1 + coord_trans(y = "log10")
 		}
 		if (input$target == "cum_cases") {
@@ -361,15 +371,15 @@ shinyServer(function(input, output, session) {
 		
 		# ---------------------------------------------------------------------
 		#  show fit line(s)
-		if (input$showReferenceLine == TRUE) {
+		if (input$fitLineType == "automatic" & !is.null(auto_fit()$fit) & input$target != "dailyGrowth") {
 		 
 		 	# average (fixed-effect) line
 		  p1 <- p1 + 
-				stat_function(fun = growth_m1, args=list(slope=exp(auto_fit()$slope), intercept=exp(auto_fit()$intercept)), color="black", size=1, linetype="dashed", xlim=c(max(input$estRange[1], min(ds$day_since_start)), min(input$estRange[2], max_day_since_start()))) +
-				stat_function(fun = growth_m1, args=list(slope=exp(auto_fit()$slope), intercept=exp(auto_fit()$intercept)), color="black", size=1, linetype="dotted") +
-		    annotate(label=paste0(round((exp(auto_fit()$slope)-1)*100), "% ", ifelse(auto_fit()$n_countries == 1, "", "average"), " growth rate"), x=max_day_since_start(), y=growth_m1(max_day_since_start()+1, slope=exp(auto_fit()$slope), intercept=exp(auto_fit()$intercept)), geom="text", hjust=1)
+				stat_function(fun = growth_m1, args=list(slope=exp(auto_fit()$slope), intercept=exp(auto_fit()$intercept)), color="black", size=0.8, linetype="dashed", xlim=c(max(input$estRange[1], min(ds$day_since_start)), min(input$estRange[2], max_day_since_start()))) +
+				stat_function(fun = growth_m1, args=list(slope=exp(auto_fit()$slope), intercept=exp(auto_fit()$intercept)), color="black", size=0.8, linetype="dotted") +
+		    annotate(label=paste0(round((exp(auto_fit()$slope)-1)*100), "% ", ifelse(auto_fit()$n_countries == 1, "", "average"), " estimated growth rate"), x=max_day_since_start(), y=growth_m1(max_day_since_start()+1, slope=exp(auto_fit()$slope), intercept=exp(auto_fit()$intercept)), geom="text", hjust=1)
 				
-				
+								
 				# if multiple countries: add individual lines
 				if (auto_fit()$n_countries > 1 & input$showRandomSlopes==TRUE) {
 					for (co in 1:nrow(auto_fit()$RE)) {
@@ -378,10 +388,40 @@ shinyServer(function(input, output, session) {
 				}				
 		}
 		
+		if (input$fitLineType == "manual" & input$target != "dailyGrowth") {
+		  p1 <- p1 + 
+				stat_function(fun = growth_m1, args=list(slope=(input$percGrowth/100+1), intercept=input$offset), color="black", size=0.8, linetype="dashed", xlim=c(max(input$estRange[1], min(ds$day_since_start)), min(input$estRange[2], max_day_since_start()))) +
+		    annotate(label=paste0(input$percGrowth, "% growth rate"), x=max_day_since_start(), y=growth_m1(max_day_since_start()+1, slope=input$percGrowth/100+1, intercept=input$offset), geom="text", hjust=1)
+		}
+		
+		
+		# ---------------------------------------------------------------------
+		# Reference lines (doubling every two days, three, four days)
+		if (input$logScale == 'log' & input$refLines == TRUE) {
+			if (input$fitLineType == "automatic") {				
+				OFFSET <- exp(auto_fit()$intercept)
+			} else {				
+				OFFSET <- input$refLineOffset
+			}
+			
+		p1 <- p1 + 
+				stat_function(fun = growth_m1, args=list(slope=2^(1/2), intercept=OFFSET), color="grey80", size=0.8, linetype="dotted")  + 
+				stat_function(fun = growth_m1, args=list(slope=2^(1/3), intercept=OFFSET), color="grey80", size=0.8, linetype="dotted") +
+				stat_function(fun = growth_m1, args=list(slope=2^(1/5), intercept=OFFSET), color="grey80", size=0.8, linetype="dotted") +
+		    annotate(label="doubling every 2 days", x=max_day_since_start(), y=growth_m1(max_day_since_start()+1, slope=2^(1/2), intercept=OFFSET), geom="text", hjust=1, vjust=0, color="grey80", angle=32) +
+		    annotate(label="doubling every 3 days", x=max_day_since_start(), y=growth_m1(max_day_since_start()+1, slope=2^(1/3), intercept=OFFSET), geom="text", hjust=1, vjust=0, color="grey80", angle=19) +
+		    annotate(label="doubling every 5 days", x=max_day_since_start(), y=growth_m1(max_day_since_start()+1, slope=2^(1/5), intercept=OFFSET), geom="text", hjust=1, vjust=0, color="grey80", angle=10)
+			}
+		
+		
+		
+		
+		# ---------------------------------------------------------------------
+		# Annotations
 	
 		if (input$annotation != "" & input$showAnnotation == TRUE & input$target != "dailyGrowth") {
 	
-			annotation_df2 <- inner_join(annotation_list() %>% filter(country %in% unique(ds$country)), ds %>% select(country, date, one_of(input$target, real_target, "day_since_start")), by=c("country", "date"))
+			annotation_df2 <- inner_join(annotation_list() %>% filter(country %in% unique(ds$country)), ds %>% select(country, date, one_of(input$target, "day_since_start")), by=c("country", "date"))
 			
 			if (nrow(annotation_df2) > 0) {
 				p1 <- p1 + geom_point(data=annotation_df2, shape=9, size=4) + geom_label_repel(data=annotation_df2, aes_string(label="label"), force = 20, nudge_x=-4, nudge_y=10, size=3)
@@ -417,7 +457,7 @@ shinyServer(function(input, output, session) {
 	                   percGrowth = input$percGrowth,
 	                   offset = input$offset,
 	                   max_day_since_start = max_day_since_start(),
-	                   showReferenceLine = input$showReferenceLine,
+	                   fitLineType = input$fitLineType,
 	                   target = input$target,
 	                   smoother_span = input$smoother_span,
 	                   smoother_se = input$smoother_se,
@@ -435,12 +475,18 @@ shinyServer(function(input, output, session) {
 	## other UI outputs
 	## ======================================================================
 	
-	output$ui_estimationWarning <- renderUI({	
-		if (input$showReferenceLine == TRUE & length(input$country_selection) > 1) {
+	output$ui_estimationNote <- renderUI({	
+		if (input$fitLineType == "automatic" & length(input$country_selection) > 1) {
 			return(tagList(p(
-				'Warning: You fit the exponential curve to more than one country, this might lead to strange results.', 
-				style = "font-style: italic; font-size: 0.85em; color:red; line-height:110%"
-				  )))
+				'The exponential curve has been fit with a hierarchical log-linear model with random intercepts and random slopes. The bold curve shows the fixed (i.e., the average) effect across all countries.', style = "font-style: italic; font-size: 0.85em; line-height:110%"),
+				code("lme4 code: log(target_variable) ~ 1 + day_since_start + (1 + day_since_start | country)")
+			))
+		}		
+		if (input$fitLineType == "automatic" & length(input$country_selection) == 1) {
+			return(tagList(p(
+				'The exponential curve has been fit with a log-linear model.', style = "font-style: italic; font-size: 0.85em; line-height:110%"),
+				code("R code: log(target_variable) ~ 1 + day_since_start")
+			))
 		}		
 	})
 

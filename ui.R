@@ -1,6 +1,7 @@
 library(shiny)
 library(shinyjs)
 library(shinythemes)
+library(shinyWidgets)
 
 helpPopup <- function(title, content,
                       placement=c('right', 'top', 'left', 'bottom'),
@@ -31,7 +32,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 	shinyjs::useShinyjs(),
 
 	h2(HTML("Visualization of Covid-19 confirmed cases")),
-	HTML('<div class="alert alert-danger alert-dismissible" role="danger"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>Please report any bugs as issues at <a href="https://github.com/nicebread/corona">Github</a>, or contribute with pull requests!<br>The CSSE data set currently changes its structure and has several reported errors; the visualization of US states has been disabled until CSSE fixes the state level data sets.</div>'),
+	HTML('<div class="alert alert-danger alert-dismissible" role="danger"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>Please report any bugs as issues at <a href="https://github.com/nicebread/corona">Github</a>, or contribute with pull requests!<br>The CSSE data set currently changes its structure; the visualization of US states has been disabled until CSSE fixes the state level data sets.</div>'),
 	HTML('<div class="alert alert-info alert-dismissible" role="info"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>Disclaimer: This visualization is for research and educational purposes only and is not intended to be a tool for decision-making. There are many uncertainties and debates about the details of COVID-19 infection and case numbers. Please read the section "Putting these numbers in context" below.</div>'),
 
 	br(),
@@ -55,9 +56,9 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		  h3("Target variable:"),
 				selectInput("target", "", choices = c(
 						"Confirmed cumulative cases" = "cum_cases",
-						"Confirmed cumulative deaths" = "cum_deaths",
+						"Confirmed cumulative deaths" = "cum_deaths_noZero",
 						"Confirmed cumulative cases per capita*" = "cum_cases_per_100000",
-						"Confirmed cumulative deaths per capita**" = "cum_deaths_per_100000",
+						"Confirmed cumulative deaths per capita**" = "cum_deaths_per_100000_noZero",
 						"Daily growth of confirmed cases" = "dailyGrowth"),
 						selected = "cum_cases", multiple=FALSE, selectize=TRUE
 					),
@@ -65,41 +66,51 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		    ),
 		  p("** 100,000 x (cumulative deaths / population)", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:110%"
 		  ),
-				# conditionalPanel(
-				# 			  	condition = "input.datasource == 'ECDC'",  # no "recovered" in ECDC data set
-				# 			    radioButtons("target", "", c(
-				# 		"Confirmed cumulative cases" = "cum_cases",
-				# 		"Confirmed cumulative deaths" = "cum_deaths",
-				# 		"Confirmed cumulative cases per 100,000" = "cum_cases_per_100000"),
-				# 		selected = "cum_cases"
-				# 	),
-				# ),
-				# conditionalPanel(
-				# 			  	condition = "input.datasource != 'ECDC'",
-				# 			    radioButtons("target", "", c(
-				# 		"Confirmed cumulative cases" = "cum_cases",
-				# 		"Confirmed cumulative deaths" = "cum_deaths",
-				# 		"Confirmed cumulative recovered" = "cum_recovered",
-				# 		"Confirmed cumulative cases per 100,000" = "cum_cases_per_100000"),
-				# 		selected = "cum_cases"
-				# 	),
-				# ),
-		  
-		  
+
 			
 				conditionalPanel(   # do not show reference line for daily growth plot
 				  condition = "input.target != 'dailyGrowth'",
 			
-					h3("Reference line:"),
-				  p("If you click on the button, both intercept and exponential growth rate are estimated from the current data in the plot. Using the two sliders, you can manually adjust the reference line. This is mostly useful when only a single country is selected.", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:110%"
-				  ),
-					uiOutput("ui_estimationWarning"),
-				  actionButton("estimateGrowth", "Fit growth rate to current country selection"),
-				  checkboxInput("showReferenceLine", "Show reference line", value=TRUE),
-					sliderInput("estRange", label = "Estimate growth rate between these 'days since X cumulative cases' only:", min = 1, max = 100, value = c(1, 100), step = 1),	
-				  sliderInput("percGrowth", label = "% daily growth:", min = 0, max = 100, value = 33, step = 1),
-				  sliderInput("offset", label = "Offset at start:", min = 1, max = 5000, value = 100, step = 5)
+					h3("Exponential fit:"),
+						#prettySwitch("manualReferenceLine", label="Set exponential reference line manually", value = FALSE, status = "default", bigger=TRUE),
+						awesomeRadio(inputId = "fitLineType", label = "Type of exponential fit line:", choices = c("no fit line"="none", "automatic"="automatic", "manual"="manual"), inline = TRUE),
+						
+						conditionalPanel(
+						  condition = "input.fitLineType != 'none'",
+							p('The exponential curve is ', em("not"), ' an epidemiological model (although in early stages an epidemic can show exponential growth). Importantly, the projection of the exponential curve is ', em("not"), ' a proper epidemiological forecast of the development.', style = "font-style: italic; font-size: 0.85em; color: red; line-height:110%")							
+						),
+						
+						conditionalPanel(
+						  condition = "input.fitLineType == 'manual'",
+							
+						  p("Using the two sliders, you can manually adjust the reference line.", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:110%"
+						  ),
+							
+							sliderInput("offset", label = "Offset at start:", min = 1, max = 5000, value = 100, step = 5),
+						  sliderInput("percGrowth", label = "% daily growth:", min = 0, max = 100, value = 33, step = 1)						  
+						),
+						
+						conditionalPanel(
+						  condition = "input.fitLineType == 'automatic'",
+							
+							sliderInput("estRange", label = "Estimate growth rate between these 'days since X cumulative cases' only:", min = 1, max = 100, value = c(1, 100), step = 1),
+							
+						  p("Intercept and exponential growth rate are estimated from all data in the plot which is in the date range indicated by the slider above. This is mostly useful when only a single country is selected. When multiple countries are selected, the average growth rate is estimated.", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:110%"),
+							uiOutput("ui_estimationNote")
+						),
+						
+						conditionalPanel(
+							condition = "input.logScale == 'log'",
+							h3("Reference lines (doubling every X days)"),
+							checkboxInput("refLines", "Show reference lines", value=TRUE),
+							conditionalPanel(
+							  condition = "input.fitLineType != 'automatic'",
+								sliderInput("refLineOffset", label = "Offset at start:", min = 1, max = 5000, value = 100, step = 5)
+							)
+						)					  
 			),		
+			
+			
 			
 			h3("Filter:"),
 			p("Filter countries/states that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 
@@ -128,15 +139,17 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		column(8,
 		       fluidRow(column(10,
 		                       h3("Display options:"),
+													 
+														conditionalPanel(
+									 						condition = "input.usePlotly == false",
+															radioGroupButtons("logScale", label = "y-axis transformation: ", choices = c("Linear"="linear", "Logarithmic"="log"))
+														),
+													 
 														conditionalPanel(
 									 				  	condition = "input.target != 'dailyGrowth'",
 															
 															checkboxInput("usePlotly", "Use interactive plot (experimental!)", value=FALSE),
 
-															conditionalPanel(
-										 						condition = "input.usePlotly == false",
-			                       	 	checkboxInput("logScale", "Print y-axis as log scale", value=FALSE)
-															),
 															
 															checkboxInput("showRandomSlopes", "Show predictions for each country in plot (random slopes)", value=FALSE)
 															

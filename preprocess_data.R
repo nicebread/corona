@@ -35,12 +35,12 @@ state_pop = read.csv('data/population_data/state_population_estimates_2019.csv',
 dat_ECDC <- dat0_ECDC %>% 
 	rename(
 		# assign shorted var names
-		country = `Countries and territories`,
-		new_cases = Cases,
-		new_deaths = Deaths		
+		country = countriesAndTerritories,
+		new_cases = cases,
+		new_deaths = deaths		
 	) %>% 
 	mutate(
-		date = as.Date(paste0(Year, "-", Month, "-", Day))
+		date = as.Date(paste0(year, "-", month, "-", day))
 	) 
 	
 	

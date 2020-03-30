@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyWidgets)
 library(rio)
 library(tidyverse)
 library(ggrepel)
@@ -7,6 +8,7 @@ library(lubridate)
 library(tidyr)
 library(magrittr)
 library(plotly)
+library(lme4)
 #library(drc)
 options(shiny.sanitize.errors = FALSE)
 
@@ -28,6 +30,7 @@ growth_m1 <- function(x, intercept, slope) {intercept*(slope^(x-1))}
 
 # estimate growth curve
 estimate_exponential_curves <- function(df, target="cum_cases", random_slopes=FALSE) {
+	# decrease "day_since_start" by 1 to get a meaningful intercept
 	df$day_since_start_m1 <- df$day_since_start - 1
 	n_countries <- length(unique(df$country))
 	
