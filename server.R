@@ -291,20 +291,22 @@ shinyServer(function(input, output, session) {
 		y_label_0 <- switch(input$target, 
 			"cum_cases" = "Cumulative number of confirmed cases", 
 			"cum_cases_per_100000" = "Cumulative number of confirmed cases, per 100,000 capita (adjusted)",
-			"cum_deaths_per_100000" = "Cumulative number of confirmed deaths, per 100,000 capita (adjusted)", 
-			"cum_deaths" = "Cumulative number of confirmed deaths",
+			"cum_deaths_per_100000_noZero" = "Cumulative number of confirmed deaths, per 100,000 capita (adjusted)", 
+			"cum_deaths_noZero" = "Cumulative number of confirmed deaths",
 			"dailyGrowth" = "Daily growth of confirmed cases in %"
 		)
 		
 		y_label <- paste0(y_label_0, ifelse(input$logScale == 'log', " (log scale)", ""))
 		
-		if (input$target != "dailyGrowth") {
-			x_label <- paste0("Days since ", get_nth_label(input$align_value), " case")
-		} else {
-			x_label <- paste0("Days since ", get_nth_label(input$align_value_daily), " case")
-		}
 		
-		
+		x_label <- switch(input$target, 
+			"cum_cases" = paste0("Days since ", get_nth_label(input$align_value), " confirmed case"), 
+			"cum_cases_per_100000" = paste0("Days since ", input$align_value, " confirmed cases per 100,000 capita"),
+			"cum_deaths_per_100000_noZero" = paste0("Days since ", input$align_value, " deaths per 100,000 capita"), 
+			"cum_deaths_noZero" = paste0("Days since ", get_nth_label(input$align_value), " death"),
+			"dailyGrowth" = paste0("Days since ", get_nth_label(input$align_value_daily), " confirmed case")
+		)		
+	
 		
 		if ('state' %in% names(ds)) {
 			p1 <- ggplot(ds, aes_string(x="day_since_start", y=input$target, color='state'))			
@@ -316,10 +318,6 @@ shinyServer(function(input, output, session) {
 		# if estimation range is restricted: show grey rect
 		if ((input$estRange[1]>1 | input$estRange[2]<max_day_since_start()) & input$fitLineType != "none") {
 			
-			YMIN <- input$align_value			
-			if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_cases_per_100000_noZero", "cum_deaths_per_100000_noZero")) YMIN <- 0.01
-			if (input$target %in% c("cum_deaths","cum_deaths_noZero")) YMIN <- 0.01
-				
 			YMIN <- min(ds[, input$target], na.rm=TRUE)*0.95
 			YMAX <- max(ds[, input$target], na.rm=TRUE)*1.05
 					
