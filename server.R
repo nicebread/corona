@@ -10,12 +10,41 @@ shinyServer(function(input, output, session) {
   # Startup flags to indicate whether session has just started up (in which case use defaults) for both state/country
   startupflag <- TRUE
   startupflag_state <- TRUE
+	
+	
+	# on target change: update sliders
+	observeEvent(input$target, { 
+		isolate({
+			if (input$target %in% c("cum_cases")) {
+				updateSliderInput(session, "offset", min = 1, max = 5000, value = 100, step = 5)
+				updateSliderInput(session, "refLineOffset", min = 1, max = 5000, value = 100, step = 5)
+				updateSliderInput(session, "align_value", min = 0, max = 1000, value = 100, step = 5)
+			} else if (input$target %in% c("cum_deaths_noZero")) {
+				updateSliderInput(session, "offset", min = 1, max = 500, value = 100, step = 1)
+				updateSliderInput(session, "refLineOffset", min = 1, max = 500, value = 100, step = 1)					
+				updateSliderInput(session, "align_value", min = 0, max = 500, value = 50, step = 5)
+			} else if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000_noZero")) {				
+				updateSliderInput(session, "offset", value = 0.1, min = 0.025, max = 20, step = 0.025)	
+				updateSliderInput(session, "refLineOffset", value = 0.1, min = 0.025, max = 20, step = 0.025)	
+				updateSliderInput(session, "align_value", min = 0, max = 10, value = 0.05, step = 0.025)
+			} else if (input$target == "dailyGrowth") {
+				#updateCheckboxInput(session, "showReferenceLine", value = FALSE)
+				updateRadioGroupButtons(session, "logScale", selected='linear')
+				updateSliderInput(session, "align_value_daily", min = 0, max = 1000, value = 100, step = 5)
+			}
+		})		
+	})
+	
   
-  # dat_startfilter stores the reduced data set (reduced by input$start_cumsum)
+  # dat_startfilter stores the reduced data set (reduced by input$align_value)
   dat_startfilter <- reactiveVal(data.frame())
 	current_data_date <- reactiveVal(NA)  # stores the current data date for the selected data set. This is displayed in the heading of the plot.
-	observe({
-    print("dat_startfilter")
+	observeEvent({
+		input$datasource
+		input$target
+		input$align_value
+		input$align_value_daily
+		input$minCases}, {
 		
 		dat <- NULL
 		if (input$datasource == "ECDC") {
@@ -31,16 +60,19 @@ shinyServer(function(input, output, session) {
 		  current_data_date(CSSE_data_date)
 		}
 		
-    dat_startfilter(dat %>% filter(
-      cum_cases >= input$start_cumsum,
-      overall_cum_cases >= input$minCases
-    ))
-  })
+		print(paste0("STARTFILTER; minCases = ", input$minCases))
+		if (input$target != "dailyGrowth") {
+			dat_startfilter(dat[dat$overall_cum_cases >= input$minCases & dat[, input$target] >= input$align_value, ])
+		} else {
+			dat_startfilter(dat[dat$overall_cum_cases >= input$minCases & dat$cum_cases >= input$align_value_daily, ])
+		}
+    
+  }, ignoreNULL=FALSE)
   
 
 # Country Selection -------------------------------------------------------
 
-	# dynamically populate country selector, based on available choices AFTER the start_cumsum filter
+	# dynamically populate country selector, based on available choices AFTER the align_value filter
   last_country_selection <- reactiveVal()
   observe({
     print(paste("last_country_selection update: ", paste(input$country_selection, collapse=", ")))
@@ -50,6 +82,7 @@ shinyServer(function(input, output, session) {
   output$country_selector <- renderUI({
     print(paste0("SELECTOR; startupflag = ", startupflag))
     
+		input$minCases  # react to this slider
     available_countries <- unique(dat_startfilter()$country)
     
     # keep the countries that were chosen before
@@ -68,18 +101,16 @@ shinyServer(function(input, output, session) {
                                selected = selection))
   })
   observeEvent(input$selectAllCountries, {
-    print("selectALL BUTTON")
     available_countries <- unique(dat_startfilter()$country)
     updateCheckboxGroupInput(session, "country_selection", selected = available_countries)
   })
   observeEvent(input$deselectAllCountries, {
-    print("DEselectALL BUTTON")
     updateCheckboxGroupInput(session, "country_selection", selected = "")
   })
   
 
 # State Selection ---------------------------------------------------------
-	# dynamically populate state selector, based on available choices AFTER the start_cumsum filter
+	# dynamically populate state selector, based on available choices AFTER the align_value filter
 	last_state_selection <- reactiveVal()
 	observe({
 	  print(paste("last_state_selection update: ", paste(input$state_selection, collapse=", ")))
@@ -107,14 +138,10 @@ shinyServer(function(input, output, session) {
 	                             selected = selection))
 	})
 	observeEvent(input$selectAllStates, {
-	  print("selectALL BUTTON")
 	  available_states <- unique(dat_startfilter()$state)
 	  updateCheckboxGroupInput(session, "state_selection", selected = available_states)
 	})
-	observeEvent(input$deselectAllStates, {
-	  print("DEselectALL BUTTON")
-	  updateCheckboxGroupInput(session, "state_selection", selected = "")
-	})
+	observeEvent(input$deselectAllStates, {updateCheckboxGroupInput(session, "state_selection", selected = "")})
 	
 	# dat_selection stores the data set filterd by state selection
   	dat_selection <- reactiveVal(data.frame())
@@ -125,11 +152,7 @@ shinyServer(function(input, output, session) {
     	  if (!is.null(input$state_selection)) {
     	    print(input$state_selection)
     	    d0 <- dat_startfilter() %>% 
-						filter(state %in% input$state_selection) %>% 
-						mutate(
-							cum_deaths_noZero = removeZero(cum_deaths),
-							cum_deaths_per_100000_noZero = removeZero(cum_deaths_per_100000)
-						)
+						filter(state %in% input$state_selection)
     	    
     	    if (nrow(d0) > 0) {
     	      dat_selection(d0 %>% mutate(day_since_start = 1:n()))
@@ -146,11 +169,7 @@ shinyServer(function(input, output, session) {
   	    if (!is.null(input$country_selection)) {
   	      print(input$country_selection)
   	      d0 <- dat_startfilter() %>% 
-						filter(country %in% input$country_selection) %>% 
-						mutate(
-							cum_deaths_noZero = removeZero(cum_deaths),
-							cum_deaths_per_100000_noZero = removeZero(cum_deaths_per_100000)
-						)
+						filter(country %in% input$country_selection)
   	      
   	      if (nrow(d0) > 0) {
   	        dat_selection(d0 %>% mutate(day_since_start = 1:n()))
@@ -166,32 +185,13 @@ shinyServer(function(input, output, session) {
   	 
   	})
   	
-	# update offset slider when start_cumsum changes
-	observe({
+	# update offset slider when align_value changes
+	observeEvent(c(input$logScale, input$align_value), {
 	  print("UPDATE OFFSET SLIDER")
-	  val <- input$start_cumsum
-	  updateSliderInput(session, "offset", value = val)
+	  updateSliderInput(session, "refLineOffset", value = input$align_value)
+		updateSliderInput(session, "offset", value = input$align_value)
 	})
 	
-	
-	# on target change: update sliders
-	observeEvent(input$target, { 
-		isolate({
-			if (input$target %in% c("cum_cases")) {
-				updateSliderInput(session, "offset", min = 1, max = 5000, value = 100, step = 5)
-				updateSliderInput(session, "refLineOffset", min = 1, max = 5000, value = 100, step = 5)					
-			} else if (input$target %in% c("cum_deaths_noZero")) {
-				updateSliderInput(session, "offset", min = 1, max = 500, value = 100, step = 1)
-				updateSliderInput(session, "refLineOffset", min = 1, max = 500, value = 100, step = 1)					
-			} else if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000_noZero")) {				
-				updateSliderInput(session, "offset", value = 0.1, min = 0.025, max = 50, step = 0.025)	
-				updateSliderInput(session, "refLineOffset", value = 0.1, min = 0.025, max = 50, step = 0.025)	
-			} else if (input$target == "dailyGrowth") {
-				#updateCheckboxInput(session, "showReferenceLine", value = FALSE)
-				updateCheckboxInput(session, "logScale", value='linear')
-			}
-		})		
-	})
 	
 	# on plotly use: disable logScale
 	observeEvent(input$usePlotly, {
@@ -205,10 +205,10 @@ shinyServer(function(input, output, session) {
 	# - the target variable changes
 	auto_fit <- reactiveVal(NULL)
 	observeEvent(c(input$estimateGrowth, input$target, dat_selection(), input$estRange, input$fitLineType), {
-	  print("estimation BUTTON")
+	  print("REESTIMATING FIT")
 		
 		ds0 <- dat_selection()
-		print(paste0(input$fitLineType, "; n=", nrow(ds0)))
+		print(paste0("Type of fit: ", input$fitLineType, "; n=", nrow(ds0)))
 		
 		if (input$fitLineType %in% c("none", "manual") | nrow(ds0) == 0 |  input$target == "dailyGrowth") {
 			print("Skipping estimation, no reference line shown")
@@ -220,8 +220,6 @@ shinyServer(function(input, output, session) {
 			ds <- ds0[ds0$day_since_start >= input$estRange[1] & ds0$day_since_start <= input$estRange[2], ] %>% 
 				as.data.frame()
 				
-			print(str(ds))
-			
 	    tryCatch({
 					fit <- estimate_exponential_curves(ds, target=input$target, random_slopes=TRUE)
 	    },
@@ -231,7 +229,7 @@ shinyServer(function(input, output, session) {
 	  )
 	  })
 		
-		print(summary(fit$fit))
+		#print(summary(fit$fit))
 	  
 		if (!is.null(fit)) {
 			print(summary(fit$fit))
@@ -277,13 +275,12 @@ shinyServer(function(input, output, session) {
 	innerplot <- function() {
 		
 	  print("PLOT:")
-		print(str(dat_selection()))
 		
 		ds <- dat_selection()
 		
 		# for local testing: create an input object
 		# ds <- dat_ECDC %>% filter(country %in% c("Germany"), cum_cases > 50) %>% mutate(day_since_start = 1:n())
-		# input <- list(target="cum_cases", logScale='linear', estRange=c(1, 100), fitLineType="automatic", start_cumsum=100, usePlotly=FALSE, datasource="CSSE", percGrowth=30, offset=100)
+		# input <- list(target="cum_cases", logScale='linear', estRange=c(1, 100), fitLineType="automatic", align_value=100, usePlotly=FALSE, datasource="CSSE", percGrowth=30, offset=100)
 		# max_day_since_start <- function() return(25)
 		# current_data_date <- function() return("2020-03-24")
 	  
@@ -301,6 +298,13 @@ shinyServer(function(input, output, session) {
 		
 		y_label <- paste0(y_label_0, ifelse(input$logScale == 'log', " (log scale)", ""))
 		
+		if (input$target != "dailyGrowth") {
+			x_label <- paste0("Days since ", get_nth_label(input$align_value), " case")
+		} else {
+			x_label <- paste0("Days since ", get_nth_label(input$align_value_daily), " case")
+		}
+		
+		
 		
 		if ('state' %in% names(ds)) {
 			p1 <- ggplot(ds, aes_string(x="day_since_start", y=input$target, color='state'))			
@@ -312,15 +316,13 @@ shinyServer(function(input, output, session) {
 		# if estimation range is restricted: show grey rect
 		if ((input$estRange[1]>1 | input$estRange[2]<max_day_since_start()) & input$fitLineType != "none") {
 			
-			YMIN <- input$start_cumsum			
+			YMIN <- input$align_value			
 			if (input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_cases_per_100000_noZero", "cum_deaths_per_100000_noZero")) YMIN <- 0.01
 			if (input$target %in% c("cum_deaths","cum_deaths_noZero")) YMIN <- 0.01
 				
 			YMIN <- min(ds[, input$target], na.rm=TRUE)*0.95
 			YMAX <- max(ds[, input$target], na.rm=TRUE)*1.05
 					
-			print(paste0("Showing shaded rectangle for input ", input$target, "; YMIN = ", YMIN, "; YMAX = ", YMAX))
-			
 			p1 <- p1 + 
 			annotate(geom="rect", xmin=input$estRange[1], xmax=min(input$estRange[2], max_day_since_start()), ymin=YMIN, ymax=YMAX, fill="azure2", alpha=.3) +
 			annotate(geom="text", x=input$estRange[1], y=YMAX, label="Curve estimated based on values in the shaded rectangle", hjust=0, size=3)
@@ -352,7 +354,7 @@ shinyServer(function(input, output, session) {
 			  caption = ifelse(input$target %in% c("cum_cases_per_100000", "cum_deaths_per_100000", "cum_deaths"),
 			                   "Source: http://shinyapps.org/apps/corona/ \n Adjusted cumulative cases per capita: 100,000 x (cumulative cases / population)",
 			                   "Source: http://shinyapps.org/apps/corona/"), 
-			  x = paste0("Days since ", get_nth_label(input$start_cumsum), " case"), y = y_label)
+			  x = x_label, y = y_label)
 
 		
 		if (input$logScale == 'log') {
@@ -451,7 +453,7 @@ shinyServer(function(input, output, session) {
 	    file.copy("COVID19.Rmd", tempReport, overwrite = TRUE)
 	    params <- list(dat_selection = dat_selection(),
 	                   logScale = input$logScale,
-	                   start_cumsum = input$start_cumsum,
+	                   align_value = input$align_value,
 	                   datasource = input$datasource,
 	                   current_data_date = current_data_date(),
 	                   percGrowth = input$percGrowth,

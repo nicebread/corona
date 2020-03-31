@@ -112,15 +112,20 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			
 			
 			
-			h3("Filter:"),
-			p("Filter countries/states that have less then this amount of cumulative cases. Those countries are not displayed in the filter checkboxes below and not shown in the plot.", 
-			  style = "font-style: italic; font-size: 0.85em; color:grey; line-height:105%"),
-			sliderInput("minCases", label = "Minimum overall cases per country/state:", min = 1, max = 10000, value = 1000, step = 10),	
-			sliderInput("start_cumsum", label = "Start display at the day with at least X cumulative cases:", min = 1, max = 1000, value = 100, step = 5),	
+			h3("Alignment:"),
+				conditionalPanel(
+				  condition = "input.target != 'dailyGrowth'",
+					sliderInput("align_value", label = "Align countries at the day when a country passed this number at the target variable:", min = 0, max = 1000, value = 100, step = 5)),
+					conditionalPanel(
+					  condition = "input.target == 'dailyGrowth'",
+						sliderInput("align_value_daily", label = "Align countries at the day when a country passed this number of cumulative confirmed cases:", min = 0, max = 1000, value = 100, step = 5)),			
+				
+			h3("State selection:"),	
+				sliderInput("minCases", label = "Hide countries/states with less than X cases:", min = 1, max = 10000, value = 1000, step = 10),		
+				
 			# Panels for selecting states/countries appear conditionally based on the chosen data
 			conditionalPanel(
 			  condition = "input.datasource == 'CSSE_State'",
-			  h2("State selection:"),
 			  actionButton("selectAllStates", "Select all states"),
 			  actionButton("deselectAllStates", "Deselect all states"),
 			  htmlOutput("state_selector")
@@ -128,7 +133,6 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			),
   		conditionalPanel(
   		  condition = "input.datasource != 'CSSE_State'",
-  			h2("Country selection:"),
   			  actionButton("selectAllCountries", "Select all countries"),
   			  actionButton("deselectAllCountries", "Deselect all countries"),
   			  htmlOutput("country_selector")
@@ -141,7 +145,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		                       h3("Display options:"),
 													 
 														conditionalPanel(
-									 						condition = "input.usePlotly == false",
+									 						condition = "input.usePlotly == false & input.target != 'dailyGrowth'",
 															radioGroupButtons("logScale", label = "y-axis transformation: ", choices = c("Linear"="linear", "Logarithmic"="log"))
 														),
 													 
@@ -170,15 +174,15 @@ Italy, 2020-03-10, Start national lockdown, https://en.wikipedia.org/wiki/2020_I
 Germany, 2020-03-23, Start national lockdown, https://www.zdf.de/nachrichten/politik/coronavirus-ausgangsbeschraenkung-verschaerfung-ueberblick-100.html", width = "800px")
 														)
 														
-													),
+													)#,
 		                       
-		                column(2,
-		                       HTML("<br><br><br><br>"),
-										 				conditionalPanel(
-										 					condition = "input.usePlotly == false",
-		                      		downloadButton("DownloadFig", "Download Plot")
-														)
-										)
+										# 		                column(2,
+										# 		                       HTML("<br><br><br><br>"),
+										#  				conditionalPanel(
+										#  					condition = "input.usePlotly == false",
+										# 		                      		downloadButton("DownloadFig", "Download Plot")
+										# 				)
+										# )
 						),
 				
 			conditionalPanel(

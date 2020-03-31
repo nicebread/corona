@@ -20,7 +20,7 @@ pop[pop$country == "Korea, Rep.", "country"] <- "South Korea"
 pop[pop$country == "United States", "country"] <- "USA"
 pop[pop$country == "Russian Federation", "country"] <- "Russia"
 pop[pop$country == "Iran, Islamic Rep.", "country"] <- "Iran"
-print(sort(unique(pop$country)))
+#print(sort(unique(pop$country)))
 
 # load in US state population data
 # State population data from 2019 US Census: https://www.census.gov/www/datasets/time-series/demo/popest/2010s-state-total.html
@@ -69,7 +69,9 @@ dat_ECDC$dailyGrowth[is.nan(dat_ECDC$dailyGrowth) | is.infinite(dat_ECDC$dailyGr
 dat_ECDC <- inner_join(dat_ECDC, pop, by="country") %>%
   mutate(
 		cum_cases_per_100000 = cum_cases / (population/100000),
-		cum_deaths_per_100000 = cum_deaths / (population/100000)
+		cum_deaths_per_100000 = cum_deaths / (population/100000),
+		cum_deaths_noZero = removeZero(cum_deaths),
+		cum_deaths_per_100000_noZero = removeZero(cum_deaths_per_100000)
 	)
 
 ECDC_data_date <- max(dat_ECDC$date)
@@ -137,7 +139,9 @@ dat_CSSE0$dailyGrowth[is.nan(dat_CSSE0$dailyGrowth) | is.infinite(dat_CSSE0$dail
 dat_CSSE <- inner_join(dat_CSSE0, pop, by="country") %>%
 	mutate(
 		cum_cases_per_100000 = cum_cases / (population/100000),
-		cum_deaths_per_100000 = cum_deaths / (population/100000)
+		cum_deaths_per_100000 = cum_deaths / (population/100000),
+		cum_deaths_noZero = removeZero(cum_deaths),
+		cum_deaths_per_100000_noZero = removeZero(cum_deaths_per_100000)
 	)
 
 CSSE_data_date <- max(dat_CSSE$date)
@@ -171,7 +175,9 @@ CSSE_data_date <- max(dat_CSSE$date)
 #   left_join(state_pop, by = 'state') %>%
 #   mutate(
 # 		cum_cases_per_100000 = cum_cases / (population/100000),
-# 		cum_deaths_per_100000 = cum_deaths / (population/100000)
+# 		cum_deaths_per_100000 = cum_deaths / (population/100000),
+		# cum_deaths_noZero = removeZero(cum_deaths),
+		# cum_deaths_per_100000_noZero = removeZero(cum_deaths_per_100000)
 # 	)
 #
 # dat_CSSE_US_states$dailyGrowth[is.nan(dat_CSSE_US_states$dailyGrowth) | is.infinite(dat_CSSE_US_states$dailyGrowth)] <- NA
