@@ -2,14 +2,40 @@
 # This data visualization is inspired by the Financial Times: https://www.ft.com/content/a26fbf7e-48f8-11ea-aeb3-955839e06441
 
 source("helpers.R", local=TRUE)
-source("download_data.R", local=TRUE)
-source("preprocess_data.R", local=TRUE)
+source("load_data.R", local=TRUE) # load the cached data
+#source("download_data.R", local=TRUE)
+#source("preprocess_data.R", local=TRUE)
+
 
 shinyServer(function(input, output, session) {
   
   # Startup flags to indicate whether session has just started up (in which case use defaults) for both state/country
   startupflag <- TRUE
   startupflag_state <- TRUE
+	
+	# downloadNote <- reactiveVal("")
+	# output$ui_downloadNote <- renderUI({
+	# 		print(paste0("Rendering ", downloadNote()))
+	# 		return(tagList(p(
+	# 			"TEST: ",
+	# 			downloadNote(),
+	# 			style = "font-style: italic; font-size: 1em; color:grey; line-height:110%")))
+	# })
+	#
+	#
+	# At each start of the app: check if new downloads are available
+	observeEvent({input}, {
+		print("CHECKING FOR NEW DATA")
+		#downloadNote("Checking for new data files ...")
+		source("download_data.R", local=TRUE)
+		if (downloadFlag == TRUE) {
+			#downloadNote("Preprocessing new data files ...")
+			source("preprocess_data.R", local=TRUE)
+			#downloadNote("Loading new data files ...")
+			source("load_data.R", local=TRUE)
+		}
+		#downloadNote("")
+	})
 	
 	
 	# on target change: update sliders
@@ -280,7 +306,7 @@ shinyServer(function(input, output, session) {
 		
 		# for local testing: create an input object
 		# ds <- dat_ECDC %>% filter(country %in% c("Germany"), cum_cases > 50) %>% mutate(day_since_start = 1:n())
-		# input <- list(target="cum_cases", logScale='linear', estRange=c(1, 100), fitLineType="automatic", align_value=100, usePlotly=FALSE, datasource="CSSE", percGrowth=30, offset=100)
+		# input <- list(target="cum_cases_per_100000", logScale='linear', estRange=c(1, 100), fitLineType="automatic", align_value=100, usePlotly=FALSE, datasource="CSSE", percGrowth=30, offset=100)
 		# max_day_since_start <- function() return(25)
 		# current_data_date <- function() return("2020-03-24")
 	  
@@ -366,7 +392,7 @@ shinyServer(function(input, output, session) {
 			p1 <- p1 + scale_y_continuous()
 		}
 		if (input$target == "dailyGrowth") {
-			p1 <- p1 + scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+			p1 <- p1 + scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits=c(0, 0.65))
 		}
 		
 		# ---------------------------------------------------------------------

@@ -66,8 +66,9 @@ dat_ECDC <- dat_ECDC %>%
 dat_ECDC$dailyGrowth[is.nan(dat_ECDC$dailyGrowth) | is.infinite(dat_ECDC$dailyGrowth)] <- NA
 
 	
-dat_ECDC <- inner_join(dat_ECDC, pop, by="country") %>%
-  mutate(
+dat_ECDC <- inner_join(dat_ECDC, pop, by="country")
+dat_ECDC <- dat_ECDC %>%
+  dplyr::mutate(
 		cum_cases_per_100000 = cum_cases / (population/100000),
 		cum_deaths_per_100000 = cum_deaths / (population/100000),
 		cum_deaths_noZero = removeZero(cum_deaths),
@@ -75,7 +76,7 @@ dat_ECDC <- inner_join(dat_ECDC, pop, by="country") %>%
 	)
 
 ECDC_data_date <- max(dat_ECDC$date)
-
+save(dat_ECDC, ECDC_data_date, file="data/dat_ECDC.RData")
 
 # ---------------------------------------------------------------------
 #  Preprocess CSSE data
@@ -145,6 +146,8 @@ dat_CSSE <- inner_join(dat_CSSE0, pop, by="country") %>%
 	)
 
 CSSE_data_date <- max(dat_CSSE$date)
+
+save(dat_CSSE, CSSE_data_date, file="data/dat_CSSE.RData")
 
 
 # # US states: transform to long format with state-by-state US data

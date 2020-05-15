@@ -26,6 +26,7 @@ recent_CSSE_recovered_file <- list.files("data/CSSE_data/", pattern="CSSE_recove
 last_ECDC_download <- recent_ECDC_file %>% str_match(pattern="ECDC_(.*)\\.xlsx") %>% extract2(2)
 last_CSSE_confirmed_download <- recent_CSSE_confirmed_file %>% str_match(pattern="_confirmed_(.*)\\.csv") %>% extract2(2)
 
+downloadFlag <- FALSE  # is set tto TRUE if a new file has been downloaded
 
 print("Checking and possibly update ECDC data.")
 # try ten days from today backwards to download the latest data file	
@@ -36,6 +37,7 @@ for (backwards in 0:10) {
 		tryCatch({
 		  download.file(paste0("https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide-", dataDate, ".xlsx"), destfile=paste0("data/ECDC_data/ECDC_", dataDate, ".xlsx"))
 			ECDC_dataDate <- dataDate
+			downloadFlag <- TRUE
 			break;
 		},
 		error=function(cond) {
@@ -61,6 +63,7 @@ if (today > last_CSSE_confirmed_download)	{
 		recent_CSSE_deaths_file <- list.files(pattern="CSSE_deaths") %>% tail(1)
 		recent_CSSE_recovered_file <- list.files(pattern="CSSE_recovered") %>% tail(1)
 		last_CSSE_confirmed_download <- last_CSSE_deaths_download <- today
+		downloadFlag <- TRUE
 	},
 	error=function(cond) {
 		  message(paste("ECDC URL does not seem to exist: ", cond))

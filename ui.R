@@ -43,11 +43,6 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 		
 		column(4,
 		  h3("Data source:"),
-			  # radioButtons("datasource", "", c(
-# 					"European Centre for Disease Prevention and Control" = "ECDC",
-# 					"Johns Hopkins CSSE" = "CSSE",
-# 					'Johns Hopkins CSSE - US States' = 'CSSE_State')
-# 				),
 			  radioButtons("datasource", "", c(
 					"European Centre for Disease Prevention and Control" = "ECDC",
 					"Johns Hopkins CSSE" = "CSSE")
@@ -58,8 +53,8 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 						"Confirmed cumulative cases" = "cum_cases",
 						"Confirmed cumulative deaths" = "cum_deaths_noZero",
 						"Confirmed cumulative cases per capita*" = "cum_cases_per_100000",
-						"Confirmed cumulative deaths per capita**" = "cum_deaths_per_100000_noZero",
-						"Daily growth of confirmed cases" = "dailyGrowth"),
+						"Confirmed cumulative deaths per capita**" = "cum_deaths_per_100000_noZero"),
+						#"Daily growth of confirmed cases" = "dailyGrowth"),
 						selected = "cum_cases", multiple=FALSE, selectize=TRUE
 					),
 		  p("* 100,000 x (cumulative cases / population)", style = "font-style: italic; font-size: 0.85em; color:grey; line-height:110%"
@@ -69,7 +64,8 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 
 			
 				conditionalPanel(   # do not show reference line for daily growth plot
-				  condition = "input.target != 'dailyGrowth'",
+				  #condition = "input.target != 'dailyGrowth'",
+					condition = "1==1",
 			
 					h3("Exponential fit:"),
 						#prettySwitch("manualReferenceLine", label="Set exponential reference line manually", value = FALSE, status = "default", bigger=TRUE),
@@ -114,7 +110,8 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
 			
 			h3("Alignment:"),
 				conditionalPanel(
-				  condition = "input.target != 'dailyGrowth'",
+				  #condition = "input.target != 'dailyGrowth'",
+					condition = "1==1",
 					sliderInput("align_value", label = "Align countries at the day when a country passed this number at the target variable:", min = 0, max = 1000, value = 100, step = 5)),
 					conditionalPanel(
 					  condition = "input.target == 'dailyGrowth'",
@@ -142,6 +139,7 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
   		)),
 		column(8,
 		       fluidRow(column(10,
+					 								#uiOutput("ui_downloadNote"),	
 		                       h3("Display options:"),
 													 
 														conditionalPanel(
@@ -184,7 +182,7 @@ Germany, 2020-03-23, Start national lockdown, https://www.zdf.de/nachrichten/pol
 										# 				)
 										# )
 						),
-				
+							
 			conditionalPanel(
 				condition = "input.usePlotly != true",
 				uiOutput("normalPlot")
